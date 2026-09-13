@@ -1,3 +1,5 @@
+using Photobooth.Delivery;
+
 namespace Photobooth.Server;
 
 public sealed class GuestDisplayOptions
@@ -96,7 +98,24 @@ public static class GuestEndpoint
 
             if (port == options.CertPort)
             {
+                // A guest's own photos, which is the other thing this plain-HTTP
+                // port is for. Downloads need no secure context, so guests are
+                // spared the certificate the iPad needs.
+                var archive = context.RequestServices.GetRequiredService<SessionArchive>();
+                if (await GuestGallery.TryServeAsync(context, archive))
+                {
+                    return;
+                }
+
                 await ServeCertificateSideAsync(context, options, certificates);
+                return;
+            }
+
+            // The gallery belongs to guests on the booth's wifi, not to the
+            // iPad, and it is never served from the operator's own port.
+            if (GuestGallery.IsGalleryPath(context.Request.Path))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
             }
 

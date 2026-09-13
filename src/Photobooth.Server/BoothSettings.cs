@@ -74,6 +74,27 @@ public sealed class BoothSettings
     /// </summary>
     public bool? GuestDisplayOnNetwork { get; set; }
 
+    /// <summary>
+    /// Serve guests their photos from the booth itself, over its own wifi.
+    ///
+    /// The replacement for a cloud link: no account to be suspended, and it
+    /// works with no internet at all.
+    /// </summary>
+    public bool? GuestGalleryEnabled { get; set; }
+
+    /// <summary>
+    /// The wifi guests join to reach the booth. Only used to build the join code
+    /// on the guest screen -- the booth does not run the network, it just tells
+    /// people how to get onto it.
+    /// </summary>
+    public string? GuestWifiSsid { get; set; }
+
+    /// <summary>
+    /// That network's password, for the same join code. Stored beside the other
+    /// booth settings; it is the guest wifi, not anything of consequence.
+    /// </summary>
+    public string? GuestWifiPassword { get; set; }
+
     // --- guest display ---
 
     /// <summary>Backdrop colour for the guest screen, so a booth can match an event.</summary>
