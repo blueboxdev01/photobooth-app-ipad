@@ -55,7 +55,11 @@
     </Exec>
     <PropertyGroup>
       <ResolvedGitSha Condition="'$(GitExitCode)' != '0' or '$(ResolvedGitSha)' == ''">unknown</ResolvedGitSha>
-      <InformationalVersion>$(Version)+$(ResolvedGitSha)</InformationalVersion>
+      <!-- "-ipad" so a tester quoting the version cannot confuse this build with
+           the main repo's. The tag stays a plain vX.Y.Z, because CI's version
+           regex only matches that and a suffix there would silently fall back to
+           whatever number this file happens to hold. -->
+      <InformationalVersion>$(Version)-ipad+$(ResolvedGitSha)</InformationalVersion>
     </PropertyGroup>
   </Target>
 
