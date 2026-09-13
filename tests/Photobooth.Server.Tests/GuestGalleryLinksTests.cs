@@ -15,7 +15,7 @@ public sealed class GuestGalleryLinksTests
     public void A_plain_network_joins()
     {
         Assert.Equal(
-            "WIFI:T:WPA;S:Photobooth;P:hunter22;;",
+            "WIFI:S:Photobooth;T:WPA;P:hunter22;;",
             GuestGalleryLinks.JoinPayload("Photobooth", "hunter22"));
     }
 
@@ -23,7 +23,7 @@ public sealed class GuestGalleryLinksTests
     public void An_open_network_says_so_rather_than_carrying_an_empty_password()
     {
         Assert.Equal(
-            "WIFI:T:nopass;S:Photobooth;P:;;",
+            "WIFI:S:Photobooth;T:nopass;P:;;",
             GuestGalleryLinks.JoinPayload("Photobooth", null));
     }
 

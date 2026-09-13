@@ -42,7 +42,12 @@ public static class GuestGalleryLinks
         var security = string.IsNullOrEmpty(password) ? "nopass" : "WPA";
         var secret = string.IsNullOrEmpty(password) ? string.Empty : Escape(password);
 
-        return $"WIFI:T:{security};S:{Escape(ssid)};P:{secret};;";
+        // S before T, which is the order the widely-copied ZXing form uses and
+        // therefore the one every scanner has certainly been tested against.
+        // Parsers are supposed to be key-based and order-blind; matching the
+        // common form costs nothing and removes a variable when a phone does
+        // nothing and cannot say why.
+        return $"WIFI:S:{Escape(ssid)};T:{security};P:{secret};;";
     }
 
     /// <summary>

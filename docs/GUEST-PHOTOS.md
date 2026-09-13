@@ -36,8 +36,12 @@ The booth does not run the network — it just tells guests how to get onto it.
 **Setup → Guest photos over your wifi → Let guests download their photos.**
 
 Fill in the **wifi network** and **password** — your router's, not the booth's.
-That is only used to build the join code; get it wrong and the code silently
-fails to join, with nothing on the phone to say why.
+
+> Type the name **exactly as it appears in your phone's wifi list**, case
+> included. The booth has no way to check it: it cannot see what networks exist,
+> so a name that is wrong, or a network that is switched off, produces a code
+> that scans perfectly and then does nothing at all. That is the single most
+> likely reason this does not work.
 
 ### 3. Check it
 
@@ -84,7 +88,8 @@ this deliberately takes the other side of.
 
 | What you see | What it means |
 |---|---|
-| The phone will not join from the code | The network name or password in Setup is wrong. Try joining by hand to check them |
+| **Scanning the join code does nothing at all** | Almost always the network in Setup is not one that is actually broadcasting -- a placeholder, a typo, or a router that is off. A phone given a code for a network it cannot see has nothing to join and usually says nothing. Check the name matches the network in your phone's own wifi list, exactly, including case |
+| The phone offers to join but fails | The password is wrong. Try joining by hand to check it |
 | Joined, but the photos page will not load | The network is separating its devices. Use your own router or the laptop's hotspot |
 | "We cannot find those photos" | The link is mistyped, or that session has been deleted from the output folder |
 | Guests have no internet while joined | Expected on a booth-only router. Phones will grumble; the photos page still works |
