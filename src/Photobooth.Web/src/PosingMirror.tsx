@@ -122,7 +122,10 @@ export function PosingMirror({ slotAspect = 4 / 3 }: { slotAspect?: number }) {
  * booth with no preview at all.
  */
 async function open(deviceId: string | null): Promise<MediaStream> {
-  const size = { width: 1280, height: 720 }
+  // facingMode 'user' matters on an iPad, which otherwise hands back the rear
+  // camera -- a posing mirror pointed away from the guest. Ignored by a laptop
+  // webcam, which has only the one.
+  const size = { width: 1280, height: 720, facingMode: 'user' as const }
 
   if (!deviceId) {
     return navigator.mediaDevices.getUserMedia({ video: size, audio: false })

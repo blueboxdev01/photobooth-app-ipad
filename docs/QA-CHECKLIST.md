@@ -198,6 +198,38 @@ measured against the R50's. Verify it honestly:
 
 ---
 
+## Section 8b — The iPad as the guest display
+
+Skip if you are using a monitor. Setup is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**.
+
+- [ ] Certificate installed **and trusted** under Certificate Trust Settings
+- [ ] Display opens with a **padlock**, and the **mirror appears**
+- [ ] It is the **front** camera, not the rear one
+- [ ] Added to the Home Screen and launched from there — fullscreen, no Safari bars
+- [ ] Guided Access on, so a guest cannot exit the display
+- [ ] Left idle **15 minutes** — the screen does not dim or sleep
+- [ ] Framing brackets match the template, and you have **recalibrated** them
+      against the iPad's lens
+
+**What must not be reachable from the iPad.** Try each; all should fail:
+
+| On the iPad, open | Expected | ✓ |
+|---|---|---|
+| `https://<booth>:5002/operator` | Not found | ☐ |
+| `https://<booth>:5002/diagnostics` | Not found | ☐ |
+| `https://<booth>:5002/api/settings` | Not found | ☐ |
+| `https://<booth>:5002/api/session/abort` | Not found | ☐ |
+
+**Surviving the real world:**
+
+- [ ] Restart the booth — the iPad reconnects with **no re-install**
+- [ ] Join a different network — still works, nothing to redo
+- [ ] Turn the wifi off mid-session — the guest screen freezes but the session
+      completes, photos intact
+- [ ] You know the fallback: plug in a monitor, open `/display` on the laptop
+
+---
+
 ## Section 9 — Delivery and the QR
 
 Skip if you are running without Google Drive.

@@ -1,4 +1,13 @@
-# Photobooth App
+# Photobooth App — iPad guest display
+
+> **This is a variant of [blueboxdev01/photobooth-app](https://github.com/blueboxdev01/photobooth-app),
+> branched at v0.10.0.** The guest display moves from an external monitor to an
+> **iPad**, whose front camera replaces the USB webcam as the posing mirror.
+> Setting it up is **[docs/IPAD-DISPLAY.md](docs/IPAD-DISPLAY.md)**.
+>
+> Everything else below is unchanged from the main repo, which stays the build
+> being field-tested.
+
 
 Photobooth software for a **Canon EOS R50**: EOS Utility saves tethered captures
 into a watch folder, this app ingests them, composites a 2×6 strip, and delivers
@@ -143,6 +152,24 @@ With no camera attached, the operator page can simulate the shutter. The mock is
 deliberately adversarial — it writes slowly in chunks and can reproduce a stale
 file, a duplicate name, and a transfer that stalls — so ingest is exercised
 before real hardware exists.
+
+## The guest display on an iPad
+
+The iPad shows the countdown, the shots and the QR, and **its front camera is the
+posing mirror** — so there is no separate webcam.
+
+A browser will not give a page the camera unless the page is a secure context, so
+the booth **runs its own certificate authority** and the iPad is told once to
+trust it. A root certificate lives in `data/` for years and is what the iPad
+trusts; the server certificate it signs is reissued on every start, so changing
+venue or IP needs nothing done to the iPad.
+
+**Only the guest display is served to the network.** The operator console, the
+template editor and every session control stay on the booth machine and are
+refused on the network ports.
+
+Off by default. Turn it on in **Setup → Guest display on an iPad**, restart, and
+follow **[docs/IPAD-DISPLAY.md](docs/IPAD-DISPLAY.md)**.
 
 ## Before an event
 

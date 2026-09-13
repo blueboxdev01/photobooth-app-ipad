@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Photobooth.Cameras;
 using Photobooth.Core;
@@ -241,6 +242,20 @@ app.MapGet("/api/state", (
 
 app.MapGet("/api/delivery", (SessionCoordinator coordinator) =>
     Results.Ok(coordinator.CurrentDelivery()));
+
+// --- guest display on an iPad ---
+
+// Scanned from the iPad rather than typed. Not on the guest allowlist, so it is
+// reachable only from this machine.
+app.MapGet("/api/guest-display/qr", (string target, IOptions<GuestDisplayOptions> options) =>
+{
+    var host = BoothCertificates.PreferredHost();
+    var url = target == "cert"
+        ? $"http://{host}:{options.Value.CertPort}/"
+        : $"https://{host}:{options.Value.DisplayPort}/display";
+
+    return Results.File(QrRenderer.Png(url), "image/png");
+});
 
 // Sign in to the booth's Google account. Deliberately only reachable from Setup:
 // this opens a browser window, which must never happen over a guest display

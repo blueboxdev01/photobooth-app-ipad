@@ -3,6 +3,7 @@ import type { DeliveryUpdate, SessionSnapshot, SessionState } from './types'
 import { useCountdown, useSession } from './useSession'
 import { PosingMirror } from './PosingMirror'
 import { backdropStyle, useDisplayTheme } from './useDisplayTheme'
+import { useWakeLock } from './useWakeLock'
 
 /**
  * States that show the guest a live mirror.
@@ -16,6 +17,11 @@ const MIRROR_STATES: SessionState[] = ['Idle', 'Countdown', 'Collecting', 'Timed
 /** The guest-facing screen. Fullscreen on the external monitor. */
 export function Display() {
   const { snapshot, delivery, slotAspect } = useSession()
+
+  // A booth sits idle between guests, and an iPad that has dimmed itself looks
+  // broken. Safari has supported this since 16.4; anything older simply carries
+  // on without it.
+  useWakeLock()
   const backdrop = backdropStyle(useDisplayTheme())
 
   if (!snapshot) {

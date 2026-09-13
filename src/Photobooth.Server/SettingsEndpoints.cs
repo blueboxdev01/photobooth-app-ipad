@@ -21,7 +21,8 @@ public sealed record SettingsUpdate(
     string? DisplayBackgroundColor,
     bool? ClearDisplayBackgroundImage,
     bool? DriveEnabled,
-    string? DriveFolderName);
+    string? DriveFolderName,
+    bool? GuestDisplayOnNetwork);
 
 /// <summary>
 /// Everything an operator sets up per event: where the camera's photos arrive,
@@ -41,6 +42,8 @@ public static class SettingsEndpoints
             FileTemplateProvider templates,
             IOptions<SessionSettings> session,
             IOptions<DriveOptions> drive,
+            IOptions<GuestDisplayOptions> guestDisplay,
+            BoothCertificates certificates,
             DriveAuth driveAuth,
             UploadQueue uploads) =>
         {
@@ -82,6 +85,22 @@ public static class SettingsEndpoints
                     backgroundImage = store.Current.DisplayBackgroundImage is null
                         ? null
                         : "/api/settings/display-background",
+                },
+
+                guestDisplay = new
+                {
+                    // What is running right now. The switch below writes the
+                    // setting, but Kestrel binds its ports once at startup, so
+                    // the two disagree until the booth is restarted.
+                    running = guestDisplay.Value.Enabled,
+                    wanted = store.Current.GuestDisplayOnNetwork ?? guestDisplay.Value.Enabled,
+                    host = BoothCertificates.PreferredHost(),
+                    certUrl = $"http://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.CertPort}/",
+                    displayUrl =
+                        $"https://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.DisplayPort}/display",
+                    authorityThumbprint = certificates.AuthorityThumbprint,
+                    authorityExpires = certificates.AuthorityExpires,
+                    addresses = BoothCertificates.Addresses().Select(a => a.ToString()),
                 },
 
                 delivery = new
@@ -178,6 +197,11 @@ public static class SettingsEndpoints
             if (update.DriveEnabled is { } driveEnabled)
             {
                 settings.DriveEnabled = driveEnabled;
+            }
+
+            if (update.GuestDisplayOnNetwork is { } onNetwork)
+            {
+                settings.GuestDisplayOnNetwork = onNetwork;
             }
 
             if (update.DriveFolderName is { } driveFolder)

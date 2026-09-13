@@ -32,6 +32,18 @@ interface SettingsResponse {
     backgroundColor: string
     backgroundImage: string | null
   }
+  guestDisplay: {
+    /** What Kestrel is actually serving right now. */
+    running: boolean
+    /** What the saved setting asks for; differs from running until a restart. */
+    wanted: boolean
+    host: string
+    certUrl: string
+    displayUrl: string
+    authorityThumbprint: string
+    authorityExpires: string
+    addresses: string[]
+  }
   delivery: {
     /** A Google OAuth client exists in this build at all. */
     configured: boolean
@@ -358,6 +370,8 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
         </p>
       </div>
 
+      <GuestDisplay data={data} busy={busy} save={save} />
+
       <Delivery data={data} busy={busy} setBusy={setBusy} setStatus={setStatus}
                 stuck={stuck} reload={load} save={save} />
 
@@ -542,6 +556,106 @@ function Delivery({
             ))}
           </ul>
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Serving the guest display to an iPad rather than a monitor.
+ *
+ * The iPad needs HTTPS before Safari will give the page a camera, and the booth
+ * is not a name any public authority will certify -- so it runs its own
+ * authority, and the iPad is told once to trust it.
+ */
+function GuestDisplay({
+  data,
+  busy,
+  save,
+}: {
+  data: SettingsResponse
+  busy: boolean
+  save: (patch: Record<string, unknown>, success: string) => Promise<boolean>
+}) {
+  const g = data.guestDisplay
+  const pendingRestart = g.wanted !== g.running
+
+  return (
+    <div className="settings__group">
+      <h3>Guest display on an iPad</h3>
+
+      {pendingRestart && (
+        <p className="banner">
+          {g.wanted ? 'Switched on' : 'Switched off'} — <strong>restart the booth</strong> to
+          apply it. The network ports are opened once, when the app starts.
+        </p>
+      )}
+
+      <div className="controls">
+        <button className="btn btn--primary" disabled={busy}
+                onClick={() => void save(
+                  { guestDisplayOnNetwork: !g.wanted },
+                  g.wanted ? 'Guest display will stay on this machine.' : 'Guest display will be served to the network.')}>
+          {g.wanted ? 'Stop serving to the network' : 'Serve the display to an iPad'}
+        </button>
+      </div>
+
+      {g.running ? (
+        <>
+          <p className="muted small">
+            Do these <strong>in order</strong>, on the iPad. The second step is the
+            one people miss, and without it the display simply will not load.
+          </p>
+
+          <div className="ipad">
+            <figure className="ipad__step">
+              <img src="/api/guest-display/qr?target=cert" alt="" />
+              <figcaption>
+                <b>1.</b> Scan, install the profile, then turn this booth on under
+                <b> Settings &rsaquo; General &rsaquo; About &rsaquo; Certificate Trust
+                Settings</b>.
+              </figcaption>
+            </figure>
+
+            <figure className="ipad__step">
+              <img src="/api/guest-display/qr?target=display" alt="" />
+              <figcaption>
+                <b>2.</b> Scan to open the display.
+                <br /><code>{g.displayUrl}</code>
+              </figcaption>
+            </figure>
+          </div>
+
+          <dl className="facts">
+            <dt>Certificate page</dt>
+            <dd><code>{g.certUrl}</code></dd>
+            <dt>Booth authority</dt>
+            <dd>
+              <code>{g.authorityThumbprint}</code>
+              <br />
+              <span className="muted small">
+                Install once per iPad. If this fingerprint ever changes, every iPad
+                has to trust the booth again.
+              </span>
+            </dd>
+            <dt>This machine</dt>
+            <dd>{g.addresses.join(', ')}</dd>
+          </dl>
+
+          <p className="muted small">
+            Only the guest display is served to the network — this page, the
+            templates and every session control stay on this machine. If the iPad
+            cannot reach the booth at all, the network is most likely separating
+            its devices; use your own router or the laptop&rsquo;s hotspot rather
+            than a venue&rsquo;s wifi.
+          </p>
+        </>
+      ) : (
+        <p className="muted small">
+          Off. The guest display is served only to this machine, for a monitor
+          plugged into it. Switch it on to use an iPad instead — the booth will
+          issue its own certificate so Safari will give the page its camera.
+        </p>
       )}
     </div>
   )
