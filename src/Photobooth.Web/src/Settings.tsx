@@ -36,8 +36,15 @@ interface SettingsResponse {
     enabled: boolean
     ssid: string | null
     hasPassword: boolean
+    /** The address guests are actually being sent to right now. */
     photosHost: string
     photosPort: number
+    /** Every address a guest link could carry, best guess first. */
+    addresses: { address: string; adapter: string; kind: string }[]
+    /** The operator's own choice; null means choose automatically. */
+    preferredAddress: string | null
+    /** A saved choice this machine no longer has -- e.g. set at another venue. */
+    preferredMissing: boolean
   }
   guestDisplay: {
     /** What Kestrel is actually serving right now. */
@@ -733,6 +740,47 @@ function GuestGallery({
               Save wifi details
             </button>
           </div>
+
+          {g.preferredMissing && (
+            <p className="banner">
+              This booth no longer has the address you picked
+              (<code>{g.preferredAddress}</code>) &mdash; it was probably saved on a
+              different network. Guests are being sent to{' '}
+              <code>{g.photosHost}</code> instead. Pick again below.
+            </p>
+          )}
+
+          <div className="fields">
+            <label>Guests reach the booth at
+              <select className="control" value={g.preferredAddress ?? ''}
+                      disabled={busy}
+                      onChange={(e) => void save(
+                        { guestPhotosAddress: e.target.value },
+                        e.target.value === ''
+                          ? 'The booth will choose its own address.'
+                          : `Guests will be sent to ${e.target.value}.`)}>
+                <option value="">Choose automatically</option>
+                {g.addresses.map((a) => (
+                  <option key={a.address} value={a.address}>
+                    {a.adapter} &mdash; {a.address}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {g.addresses.length === 0 ? (
+            <p className="banner">
+              This booth has no network address, so there is nowhere to send
+              guests. Connect it to the wifi or router the guests will be on.
+            </p>
+          ) : g.addresses.length > 1 && g.preferredAddress === null ? (
+            <p className="banner">
+              This booth is on <strong>{g.addresses.length} networks</strong> and is
+              guessing. Only one of them is the guests&rsquo; &mdash; pick it above,
+              or the code will scan and then never load.
+            </p>
+          ) : null}
 
           <dl className="facts">
             <dt>Guests reach</dt>

@@ -56,11 +56,16 @@ public static class GuestGalleryLinks
     /// A number, not the mDNS name the iPad uses: Android's support for
     /// <c>.local</c> is patchy, and a guest whose phone cannot resolve it has no
     /// way to tell that is what went wrong.
+    ///
+    /// <para>
+    /// <paramref name="preferred"/> is the operator's own choice from Setup. It
+    /// matters because a booth laptop is routinely on two networks at once --
+    /// the guests' router and the operator's wifi -- and only one of them is
+    /// reachable from a guest's phone. See <see cref="BoothAddresses"/>.
+    /// </para>
     /// </summary>
-    public static string GuestHost() =>
-        BoothCertificates.Addresses()
-            .FirstOrDefault(a => !System.Net.IPAddress.IsLoopback(a))
-            ?.ToString()
+    public static string GuestHost(string? preferred = null) =>
+        BoothAddresses.Choose(preferred, BoothAddresses.UsableOnThisMachine())?.Address
         ?? "127.0.0.1";
 
     /// <summary>Where a guest's photos live, on the booth's network address.</summary>

@@ -25,7 +25,8 @@ public sealed record SettingsUpdate(
     bool? GuestDisplayOnNetwork,
     bool? GuestGalleryEnabled,
     string? GuestWifiSsid,
-    string? GuestWifiPassword);
+    string? GuestWifiPassword,
+    string? GuestPhotosAddress);
 
 /// <summary>
 /// Everything an operator sets up per event: where the camera's photos arrive,
@@ -51,6 +52,8 @@ public static class SettingsEndpoints
             UploadQueue uploads) =>
         {
             var current = templates.Current;
+            var usableAddresses = BoothAddresses.UsableOnThisMachine();
+
             return Results.Ok(new
             {
                 watchFolder = camera.WatchFolderPath,
@@ -95,8 +98,25 @@ public static class SettingsEndpoints
                     enabled = store.Current.GuestGalleryEnabled ?? false,
                     ssid = store.Current.GuestWifiSsid,
                     hasPassword = !string.IsNullOrEmpty(store.Current.GuestWifiPassword),
-                    photosHost = GuestGalleryLinks.GuestHost(),
+                    photosHost = GuestGalleryLinks.GuestHost(store.Current.GuestPhotosAddress),
                     photosPort = guestDisplay.Value.CertPort,
+
+                    // Every address a guest link could carry, so the operator can
+                    // see what the automatic pick chose and overrule it. The
+                    // adapter name is the point: two private addresses are not
+                    // tellable apart without it.
+                    addresses = usableAddresses.Select(a => new
+                    {
+                        address = a.Address,
+                        adapter = a.Adapter,
+                        a.Kind,
+                    }),
+                    preferredAddress = store.Current.GuestPhotosAddress,
+
+                    // A choice saved at the last venue is a dead address at this
+                    // one. Said out loud rather than silently ignored.
+                    preferredMissing = !string.IsNullOrWhiteSpace(store.Current.GuestPhotosAddress)
+                        && !BoothAddresses.IsAvailable(store.Current.GuestPhotosAddress, usableAddresses),
                 },
 
                 guestDisplay = new
@@ -243,6 +263,32 @@ public static class SettingsEndpoints
                 settings.GuestWifiPassword = password.Length == 0 ? null : password;
             }
 
+            if (update.GuestPhotosAddress is { } photosAddress)
+            {
+                var wanted = photosAddress.Trim();
+
+                if (wanted.Length == 0)
+                {
+                    // Back to automatic.
+                    settings.GuestPhotosAddress = null;
+                }
+                else if (!BoothAddresses.IsAvailable(wanted, BoothAddresses.UsableOnThisMachine()))
+                {
+                    // Only an address this machine actually answers on. Accepting
+                    // a typed one would let the booth advertise a link nothing
+                    // can reach, which is the failure this setting exists to stop.
+                    return Results.BadRequest(new
+                    {
+                        error = $"This booth has no address {wanted} right now. "
+                              + "Pick one of the addresses listed, or choose automatically.",
+                    });
+                }
+                else
+                {
+                    settings.GuestPhotosAddress = wanted;
+                }
+            }
+
             if (update.DriveFolderName is { } driveFolder)
             {
                 var trimmed = driveFolder.Trim();
@@ -331,6 +377,8 @@ public static class SettingsEndpoints
             store.Save(settings);
 
             var current = templates.Current;
+            var usableAddresses = BoothAddresses.UsableOnThisMachine();
+
             return Results.Ok(new
             {
                 watchFolder = camera.WatchFolderPath,

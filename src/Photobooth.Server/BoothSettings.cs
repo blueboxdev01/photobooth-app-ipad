@@ -95,6 +95,17 @@ public sealed class BoothSettings
     /// </summary>
     public string? GuestWifiPassword { get; set; }
 
+    /// <summary>
+    /// Which of this machine's addresses the photos QR advertises.
+    ///
+    /// Null means choose automatically, which is right for a booth with one
+    /// network. It stops being right the moment the laptop is on the guests'
+    /// router and the operator's wifi at once: only one of those is reachable
+    /// from a phone, and picking the wrong one produces a QR that scans and then
+    /// never loads. See <see cref="BoothAddresses"/>.
+    /// </summary>
+    public string? GuestPhotosAddress { get; set; }
+
     // --- guest display ---
 
     /// <summary>Backdrop colour for the guest screen, so a booth can match an event.</summary>

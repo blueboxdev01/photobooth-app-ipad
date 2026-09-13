@@ -284,7 +284,9 @@ app.MapGet("/api/guest-gallery/qr", (
     }
 
     var url = GuestGalleryLinks.PhotosUrl(
-        GuestGalleryLinks.GuestHost(), options.Value.CertPort, token);
+        GuestGalleryLinks.GuestHost(store.Current.GuestPhotosAddress),
+        options.Value.CertPort,
+        token);
 
     return Results.File(QrRenderer.Png(url), "image/png");
 });
