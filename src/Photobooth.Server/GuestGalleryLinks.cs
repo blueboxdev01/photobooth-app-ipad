@@ -45,6 +45,19 @@ public static class GuestGalleryLinks
         return $"WIFI:T:{security};S:{Escape(ssid)};P:{secret};;";
     }
 
+    /// <summary>
+    /// The address to put in a guest's link.
+    ///
+    /// A number, not the mDNS name the iPad uses: Android's support for
+    /// <c>.local</c> is patchy, and a guest whose phone cannot resolve it has no
+    /// way to tell that is what went wrong.
+    /// </summary>
+    public static string GuestHost() =>
+        BoothCertificates.Addresses()
+            .FirstOrDefault(a => !System.Net.IPAddress.IsLoopback(a))
+            ?.ToString()
+        ?? "127.0.0.1";
+
     /// <summary>Where a guest's photos live, on the booth's network address.</summary>
     public static string PhotosUrl(string host, int port, string token) =>
         $"http://{host}:{port}{GuestGallery.Prefix}{Uri.EscapeDataString(token)}";

@@ -17,6 +17,12 @@ export function useSession() {
   // The shape of one photo on the strip, for the guest screen's framing guide.
   // Polled with the rest of the state: it only changes when the template does.
   const [slotAspect, setSlotAspect] = useState(4 / 3)
+  // Whether guests take their photos from the booth itself, and the network they
+  // join to do it.
+  const [gallery, setGallery] = useState<{ enabled: boolean; ssid: string | null }>({
+    enabled: false,
+    ssid: null,
+  })
   const [connected, setConnected] = useState(false)
   const connectionRef = useRef<HubConnection | null>(null)
 
@@ -65,6 +71,7 @@ export function useSession() {
           if (typeof body.slotAspect === 'number' && body.slotAspect > 0) {
             setSlotAspect(body.slotAspect)
           }
+          if (body.guestGallery) setGallery(body.guestGallery)
           if (!connectionRef.current) setSnapshot(body.session)
         }
       } catch {
@@ -79,7 +86,7 @@ export function useSession() {
     }
   }, [])
 
-  return { snapshot, delivery, camera, connected, slotAspect }
+  return { snapshot, delivery, camera, connected, slotAspect, gallery }
 }
 
 export async function command(name: string, body?: unknown) {

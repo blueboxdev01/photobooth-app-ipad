@@ -32,6 +32,13 @@ interface SettingsResponse {
     backgroundColor: string
     backgroundImage: string | null
   }
+  guestGallery: {
+    enabled: boolean
+    ssid: string | null
+    hasPassword: boolean
+    photosHost: string
+    photosPort: number
+  }
   guestDisplay: {
     /** What Kestrel is actually serving right now. */
     running: boolean
@@ -370,6 +377,8 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
         </p>
       </div>
 
+      <GuestGallery data={data} busy={busy} save={save} />
+
       <GuestDisplay data={data} busy={busy} save={save} />
 
       <Delivery data={data} busy={busy} setBusy={setBusy} setStatus={setStatus}
@@ -655,6 +664,93 @@ function GuestDisplay({
           Off. The guest display is served only to this machine, for a monitor
           plugged into it. Switch it on to use an iPad instead — the booth will
           issue its own certificate so Safari will give the page its camera.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Guests taking their photos from the booth itself.
+ *
+ * The replacement for a cloud link: nothing to sign into, nothing to be
+ * suspended, and it works with no internet. The cost is that guests have to join
+ * a network, which is the step worth making as easy as scanning a code.
+ */
+function GuestGallery({
+  data,
+  busy,
+  save,
+}: {
+  data: SettingsResponse
+  busy: boolean
+  save: (patch: Record<string, unknown>, success: string) => Promise<boolean>
+}) {
+  const g = data.guestGallery
+  const [ssid, setSsid] = useState(g.ssid ?? '')
+  const [password, setPassword] = useState('')
+
+  return (
+    <div className="settings__group">
+      <h3>Guest photos over your wifi</h3>
+
+      <div className="controls">
+        <button className="btn btn--primary" disabled={busy}
+                onClick={() => void save(
+                  { guestGalleryEnabled: !g.enabled },
+                  g.enabled ? 'Guests will be handed photos by hand.' : 'Guests can take their own photos.')}>
+          {g.enabled ? 'Stop serving photos to guests' : 'Let guests download their photos'}
+        </button>
+      </div>
+
+      {g.enabled ? (
+        <>
+          <p className="muted small">
+            At the end of a session the guest screen shows two codes: one to join
+            your wifi, one to open their own photos. Fill in the network so the
+            first code works &mdash; it is your router, not the booth&rsquo;s.
+          </p>
+
+          <div className="fields">
+            <label>Wifi network
+              <input className="control" value={ssid} spellCheck={false}
+                     placeholder="Photobooth"
+                     onChange={(e) => setSsid(e.target.value)} />
+            </label>
+            <label>Wifi password
+              <input className="control" type="password" value={password}
+                     spellCheck={false}
+                     placeholder={g.hasPassword ? '••••••••' : 'none'}
+                     onChange={(e) => setPassword(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="controls">
+            <button className="btn" disabled={busy}
+                    onClick={() => void save(
+                      { guestWifiSsid: ssid.trim(), guestWifiPassword: password },
+                      'Wifi details saved.')}>
+              Save wifi details
+            </button>
+          </div>
+
+          <dl className="facts">
+            <dt>Guests reach</dt>
+            <dd><code>http://{g.photosHost}:{g.photosPort}/g/&hellip;</code></dd>
+          </dl>
+
+          <p className="muted small">
+            Each link opens one session and nothing else, so a guest can only ever
+            see their own photos. <strong>The link stops working once they leave
+            your wifi</strong> &mdash; it is for taking photos away there and then,
+            not for coming back to next week.
+          </p>
+        </>
+      ) : (
+        <p className="muted small">
+          Off. Guests are told to ask for their photos, and you hand them over from
+          the output folder. Switch this on to let them scan a code and download
+          their own.
         </p>
       )}
     </div>

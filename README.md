@@ -153,6 +153,20 @@ deliberately adversarial — it writes slowly in chunks and can reproduce a stal
 file, a duplicate name, and a transfer that stalls — so ingest is exercised
 before real hardware exists.
 
+## Guests take their own photos
+
+The booth serves each guest their photos **over its own wifi** — they scan a code
+to join the network, scan another for their session, and download. No account, no
+cloud, no internet, and nothing that can be suspended.
+
+Each link carries the session's own unguessable id, so a guest reaches their own
+photos and nothing else; no route lists sessions, and an unknown id is
+indistinguishable from a deleted one.
+
+The catch: **the link stops working when the guest leaves the wifi.** This is
+delivery on the spot. Setting it up is
+**[docs/GUEST-PHOTOS.md](docs/GUEST-PHOTOS.md)**.
+
 ## The guest display on an iPad
 
 The iPad shows the countdown, the shots and the QR, and **its front camera is the

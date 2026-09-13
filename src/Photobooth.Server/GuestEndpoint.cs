@@ -53,6 +53,10 @@ public static class GuestEndpoint
         "/api/delivery",
         "/api/photos/",
         "/api/settings/display-background",
+
+        // The guest screen shows the join code and the photos code at the end of
+        // a session, so it has to be able to fetch them.
+        "/api/guest-gallery/qr",
     ];
 
     /// <summary>

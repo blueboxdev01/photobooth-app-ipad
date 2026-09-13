@@ -22,7 +22,10 @@ public sealed record SettingsUpdate(
     bool? ClearDisplayBackgroundImage,
     bool? DriveEnabled,
     string? DriveFolderName,
-    bool? GuestDisplayOnNetwork);
+    bool? GuestDisplayOnNetwork,
+    bool? GuestGalleryEnabled,
+    string? GuestWifiSsid,
+    string? GuestWifiPassword);
 
 /// <summary>
 /// Everything an operator sets up per event: where the camera's photos arrive,
@@ -85,6 +88,15 @@ public static class SettingsEndpoints
                     backgroundImage = store.Current.DisplayBackgroundImage is null
                         ? null
                         : "/api/settings/display-background",
+                },
+
+                guestGallery = new
+                {
+                    enabled = store.Current.GuestGalleryEnabled ?? false,
+                    ssid = store.Current.GuestWifiSsid,
+                    hasPassword = !string.IsNullOrEmpty(store.Current.GuestWifiPassword),
+                    photosHost = GuestGalleryLinks.GuestHost(),
+                    photosPort = guestDisplay.Value.CertPort,
                 },
 
                 guestDisplay = new
@@ -202,6 +214,33 @@ public static class SettingsEndpoints
             if (update.GuestDisplayOnNetwork is { } onNetwork)
             {
                 settings.GuestDisplayOnNetwork = onNetwork;
+            }
+
+            if (update.GuestGalleryEnabled is { } gallery)
+            {
+                settings.GuestGalleryEnabled = gallery;
+            }
+
+            if (update.GuestWifiSsid is { } ssid)
+            {
+                var trimmed = ssid.Trim();
+
+                // A network name is at most 32 bytes by the standard; anything
+                // longer is a typo, and would make a join code nothing can read.
+                if (System.Text.Encoding.UTF8.GetByteCount(trimmed) > 32)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "A wifi network name is at most 32 characters.",
+                    });
+                }
+
+                settings.GuestWifiSsid = trimmed.Length == 0 ? null : trimmed;
+            }
+
+            if (update.GuestWifiPassword is { } password)
+            {
+                settings.GuestWifiPassword = password.Length == 0 ? null : password;
             }
 
             if (update.DriveFolderName is { } driveFolder)

@@ -230,6 +230,34 @@ Skip if you are using a monitor. Setup is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**
 
 ---
 
+## Section 8c — Guests downloading their own photos
+
+Skip if you are handing photos over by hand. Setup is
+**[GUEST-PHOTOS.md](GUEST-PHOTOS.md)**.
+
+From **your own phone**, on the booth's wifi:
+
+- [ ] The join code actually joins the network, without typing a password
+- [ ] The photos code opens **your** session
+- [ ] The strip and every photo are there
+- [ ] Download one — it opens, and is named for the session
+- [ ] **Download all as a zip** — it opens, and holds every file
+- [ ] Run a second session: its code shows different photos
+
+**What a guest must not reach.** Try each from the phone; all should refuse:
+
+| On the phone, open | Expected | ✓ |
+|---|---|---|
+| The link with one character changed | "We cannot find those photos" | ☐ |
+| `.../session.json` on your own link | Not found | ☐ |
+| `http://<booth>:<port>/operator` | The iPad setup page, **not** the console | ☐ |
+| `http://<booth>:<port>/api/session/abort` | Same, and the session keeps running | ☐ |
+
+- [ ] Leave the wifi, then open the link again — it should stop working, and you
+      should be comfortable explaining that to a guest
+
+---
+
 ## Section 9 — Delivery and the QR
 
 Skip if you are running without Google Drive.

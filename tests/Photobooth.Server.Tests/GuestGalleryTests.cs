@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Photobooth.Core;
@@ -151,6 +152,37 @@ public sealed class GuestGalleryTests : IDisposable
         var (_, body) = await GetAsync($"/g/{record.Token}");
 
         Assert.DoesNotContain("session.json", Text(body));
+    }
+
+    /// <summary>
+    /// The one a MemoryStream cannot catch, and running it did.
+    ///
+    /// ZipArchive writes the central directory from Dispose, synchronously, and
+    /// Kestrel refuses synchronous writes by default. Without the opt-in, every
+    /// entry streams out, the footer throws, and the guest is handed HTTP 200 and
+    /// an archive their phone cannot open -- success from every angle except the
+    /// only one that matters.
+    /// </summary>
+    [Fact]
+    public async Task Building_the_zip_opts_into_the_synchronous_write_it_needs()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+
+        var context = Request($"/g/{record.Token}/all.zip");
+        var control = new BodyControl();
+        context.Features.Set<IHttpBodyControlFeature>(control);
+
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        Assert.True(
+            control.AllowSynchronousIO,
+            "the zip's central directory is written synchronously; without this "
+            + "Kestrel throws after the entries are already on the wire");
+    }
+
+    private sealed class BodyControl : IHttpBodyControlFeature
+    {
+        public bool AllowSynchronousIO { get; set; }
     }
 
     // --- what a link must not reach ------------------------------------------

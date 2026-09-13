@@ -212,7 +212,9 @@ app.MapGet("/api/state", (
     WatchFolderCamera camera,
     SessionEngine engine,
     SessionCoordinator coordinator,
-    FileTemplateProvider templates) =>
+    FileTemplateProvider templates,
+    SettingsStore settings,
+    SessionArchive archive) =>
 {
     // The shape of one photo on the strip, so the guest screen can draw a
     // framing guide that matches the template actually in use rather than the
@@ -234,6 +236,17 @@ app.MapGet("/api/state", (
         session = engine.Snapshot,
         delivery = coordinator.CurrentDelivery(),
         slotAspect,
+
+        // Where finished sessions are written. The console used to show only a
+        // folder *name*, which is no help in finding one.
+        outputFolder = archive.Root,
+
+        guestGallery = new
+        {
+            enabled = settings.Current.GuestGalleryEnabled ?? false,
+            ssid = settings.Current.GuestWifiSsid,
+        },
+
         build = new { version = DiagnosticsService.Version },
     });
 });
@@ -247,6 +260,35 @@ app.MapGet("/api/delivery", (SessionCoordinator coordinator) =>
 
 // Scanned from the iPad rather than typed. Not on the guest allowlist, so it is
 // reachable only from this machine.
+// The two codes a guest is shown at the end of a session. Reachable from the
+// display port, because that is where the guest screen runs.
+app.MapGet("/api/guest-gallery/qr", (
+    string target, string? token, SettingsStore store, IOptions<GuestDisplayOptions> options) =>
+{
+    if (target == "join")
+    {
+        var ssid = store.Current.GuestWifiSsid;
+        if (string.IsNullOrWhiteSpace(ssid))
+        {
+            return Results.NotFound();
+        }
+
+        return Results.File(
+            QrRenderer.Png(GuestGalleryLinks.JoinPayload(ssid, store.Current.GuestWifiPassword)),
+            "image/png");
+    }
+
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.NotFound();
+    }
+
+    var url = GuestGalleryLinks.PhotosUrl(
+        GuestGalleryLinks.GuestHost(), options.Value.CertPort, token);
+
+    return Results.File(QrRenderer.Png(url), "image/png");
+});
+
 app.MapGet("/api/guest-display/qr", (string target, IOptions<GuestDisplayOptions> options) =>
 {
     var host = BoothCertificates.PreferredHost();

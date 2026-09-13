@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Microsoft.AspNetCore.Http.Features;
 using System.Net;
 using Photobooth.Delivery;
 
@@ -123,6 +124,17 @@ public static class GuestGallery
         context.Response.ContentType = "application/zip";
         context.Response.Headers.ContentDisposition =
             $"attachment; filename=\"photobooth-{record.FolderName}.zip\"";
+
+        // ZipArchive writes the central directory from Dispose, synchronously,
+        // and has no async disposal to offer instead. Kestrel refuses
+        // synchronous writes by default, so without this the entries stream out
+        // fine, the footer throws, and the guest is handed a 200 and a corrupt
+        // archive -- a failure that looks like success from every angle.
+        var sync = context.Features.Get<IHttpBodyControlFeature>();
+        if (sync is not null)
+        {
+            sync.AllowSynchronousIO = true;
+        }
 
         // Streamed rather than built in memory: a session is around 25 MB of
         // JPEGs and there is no reason to hold all of it twice.
