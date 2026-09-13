@@ -67,6 +67,15 @@ public sealed class BoothSettings
 
     // --- guest display ---
 
+    /// <summary>
+    /// Whether the guest display is served to the network, for an iPad rather
+    /// than a monitor plugged into this machine. Off unless someone turns it on:
+    /// binding to a venue's wifi is a decision, not a default.
+    /// </summary>
+    public bool? GuestDisplayOnNetwork { get; set; }
+
+    // --- guest display ---
+
     /// <summary>Backdrop colour for the guest screen, so a booth can match an event.</summary>
     public string? DisplayBackgroundColor { get; set; }
 

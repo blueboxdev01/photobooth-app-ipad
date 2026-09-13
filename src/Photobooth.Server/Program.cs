@@ -34,6 +34,8 @@ builder.Services.Configure<ArchiveOptions>(
     builder.Configuration.GetSection(ArchiveOptions.SectionName));
 builder.Services.Configure<DriveOptions>(
     builder.Configuration.GetSection(DriveOptions.SectionName));
+builder.Services.Configure<GuestDisplayOptions>(
+    builder.Configuration.GetSection(GuestDisplayOptions.SectionName));
 
 // Relative paths resolve against the app folder rather than whatever directory
 // the shell happened to be in, so `dotnet run` and an unzipped published build
@@ -119,6 +121,47 @@ builder.Services.PostConfigure<SessionSettings>(o =>
         settingsStore.Current.NoPhotoTimeoutSeconds ?? o.NoPhotoTimeoutSeconds;
 });
 
+// The booth's own certificate authority. Created on first run; the root is what
+// an iPad installs once, and the leaf is reissued below on every start so a
+// change of venue or address needs nothing done to the iPad.
+var certificates = BoothCertificates.Load(ResolveAppPath("data"));
+builder.Services.AddSingleton(certificates);
+
+var guest = new GuestDisplayOptions();
+builder.Configuration.GetSection(GuestDisplayOptions.SectionName).Bind(guest);
+if (settingsStore.Current.GuestDisplayOnNetwork is { } onNetwork)
+{
+    guest.Enabled = onNetwork;
+}
+
+// Explicit listeners rather than the Urls setting, so the three endpoints are
+// visible in one place and cannot be half-overridden by configuration.
+var operatorPort = OperatorPort(builder.Configuration);
+builder.WebHost.ConfigureKestrel(kestrel =>
+{
+    // The operator console never leaves this machine. localhost is also already
+    // a secure context, so the laptop's own browser keeps its camera access.
+    kestrel.ListenLocalhost(operatorPort);
+
+    if (!guest.Enabled)
+    {
+        return;
+    }
+
+    kestrel.ListenAnyIP(guest.CertPort);
+    kestrel.ListenAnyIP(guest.DisplayPort,
+        listen => listen.UseHttps(certificates.IssueServerCertificate()));
+});
+
+static int OperatorPort(IConfiguration configuration)
+{
+    var urls = configuration["Urls"];
+    return !string.IsNullOrWhiteSpace(urls)
+        && Uri.TryCreate(urls.Split(';')[0], UriKind.Absolute, out var parsed)
+            ? parsed.Port
+            : 5000;
+}
+
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WatchFolderCamera>();
 builder.Services.AddSingleton<ICameraDevice>(sp => sp.GetRequiredService<WatchFolderCamera>());
@@ -142,6 +185,19 @@ builder.Services.AddSingleton<UploadQueue>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UploadQueue>());
 
 var app = builder.Build();
+
+// Before anything else: the network-facing ports serve the guest display and the
+// certificate, and refuse the operator console and every session command.
+if (guest.Enabled)
+{
+    app.UseGuestEndpointRules(guest, certificates);
+
+    app.Logger.LogInformation(
+        "Guest display reachable at https://{Host}:{Port}/display "
+        + "(certificate from http://{Host}:{CertPort}/, root {Thumbprint}).",
+        BoothCertificates.PreferredHost(), guest.DisplayPort,
+        BoothCertificates.PreferredHost(), guest.CertPort, certificates.AuthorityThumbprint);
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
