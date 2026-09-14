@@ -152,6 +152,7 @@ jobs:
           Copy-Item docs/QA-CHECKLIST.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/IPAD-DISPLAY.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/GUEST-PHOTOS.md artifacts/publish/ -ErrorAction SilentlyContinue
+          Copy-Item docs/TESTING-GUEST-PHOTOS.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item appsettings.Local.example.json artifacts/publish/ -ErrorAction SilentlyContinue
           Compress-Archive -Path artifacts/publish/* -DestinationPath "artifacts/$name.zip"
           echo "ASSET=artifacts/$name.zip" >> $env:GITHUB_ENV
