@@ -25,6 +25,38 @@ public sealed class GuestDisplayOptions
 
     /// <summary>HTTPS, serving the guest display.</summary>
     public int DisplayPort { get; set; } = 5002;
+
+    /// <summary>
+    /// What the booth will actually run with: what the build shipped, overridden
+    /// by what the operator chose in Setup.
+    ///
+    /// <para>
+    /// <b>There must be exactly one of these, and this is where it comes from.</b>
+    /// It used to be worked out twice -- once for binding the ports and once for
+    /// reporting the state -- and only the first had the operator's choice
+    /// applied. So the booth served the guest display perfectly while Setup
+    /// insisted a restart was still needed, however many times you restarted.
+    /// Everything worked except the one thing telling you whether it had.
+    /// </para>
+    /// </summary>
+    /// <param name="operatorChoice">
+    /// The saved switch, or null when the operator has never touched it -- in
+    /// which case the build's own setting stands. Off unless someone says
+    /// otherwise: binding to a venue's wifi is a decision, not a default.
+    /// </param>
+    public static GuestDisplayOptions Resolve(
+        IConfiguration configuration, bool? operatorChoice)
+    {
+        var options = new GuestDisplayOptions();
+        configuration.GetSection(SectionName).Bind(options);
+
+        if (operatorChoice is { } wanted)
+        {
+            options.Enabled = wanted;
+        }
+
+        return options;
+    }
 }
 
 /// <summary>

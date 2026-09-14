@@ -35,8 +35,6 @@ builder.Services.Configure<ArchiveOptions>(
     builder.Configuration.GetSection(ArchiveOptions.SectionName));
 builder.Services.Configure<DriveOptions>(
     builder.Configuration.GetSection(DriveOptions.SectionName));
-builder.Services.Configure<GuestDisplayOptions>(
-    builder.Configuration.GetSection(GuestDisplayOptions.SectionName));
 
 // Relative paths resolve against the app folder rather than whatever directory
 // the shell happened to be in, so `dotnet run` and an unzipped published build
@@ -128,12 +126,14 @@ builder.Services.PostConfigure<SessionSettings>(o =>
 var certificates = BoothCertificates.Load(ResolveAppPath("data"));
 builder.Services.AddSingleton(certificates);
 
-var guest = new GuestDisplayOptions();
-builder.Configuration.GetSection(GuestDisplayOptions.SectionName).Bind(guest);
-if (settingsStore.Current.GuestDisplayOnNetwork is { } onNetwork)
-{
-    guest.Enabled = onNetwork;
-}
+// Resolved once, and registered so that everything reading these options sees
+// the same answer Kestrel bound its ports from. Configuring it separately for
+// dependency injection is what produced a booth that served the guest display
+// while Setup swore a restart was still needed.
+var guest = GuestDisplayOptions.Resolve(
+    builder.Configuration, settingsStore.Current.GuestDisplayOnNetwork);
+
+builder.Services.AddSingleton<IOptions<GuestDisplayOptions>>(Options.Create(guest));
 
 // Explicit listeners rather than the Urls setting, so the three endpoints are
 // visible in one place and cannot be half-overridden by configuration.
