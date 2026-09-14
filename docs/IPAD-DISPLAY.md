@@ -153,6 +153,15 @@ shown under **This machine** on the Setup page — the certificate covers both.
 **Safari says the connection is not private.** The certificate is installed but
 not trusted. Go back to *Certificate Trust Settings* and switch the booth on.
 
+**The page loads but sits on "Connecting..." for ever.** Getting this far means
+the address, the certificate and the network are all correct -- the booth served
+the page. Only the live connection is missing.
+
+On **v0.12.1 and older this was a bug in the booth**, not anything you did: the
+network port allowed the live-updates channel but not the handshake that opens
+it, so the display could never connect and nothing reported an error. Fixed in
+**v0.12.2**; upgrade rather than hunting for a cause.
+
 **The mirror is missing but the page loads.** Safari was denied the camera:
 **Settings → Apps → Safari → Camera → Allow**, then reload. If the page is on
 `http://` rather than `https://`, no permission will help — open the HTTPS URL.

@@ -32,6 +32,46 @@ public sealed class GuestEndpointTests
     }
 
     /// <summary>
+    /// SignalR does not open a socket to the hub address. It first POSTs to
+    /// <c>{hub}/negotiate</c> to agree a transport, and only then connects.
+    ///
+    /// <para>
+    /// Allowing the hub itself and not its handshake is a booth that serves the
+    /// iPad a page which then sits on "Connecting..." forever. The page loads,
+    /// the certificate is fine, the address is right, and nothing anywhere
+    /// reports an error -- so it reads as a broken app. A tester lost an evening
+    /// to exactly this.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("/hub/session/negotiate")]
+    [InlineData("/hub/session/negotiate?negotiateVersion=1")]
+    public void The_hubs_handshake_is_served_as_well_as_the_hub(string path)
+    {
+        // A query string is not part of the path ASP.NET matches on, but the
+        // literal form is pinned here so nobody "tidies" the rule and breaks it.
+        var justThePath = path.Split('?')[0];
+
+        Assert.True(
+            GuestEndpoint.IsGuestPath(justThePath),
+            "without the negotiate handshake the display never connects");
+    }
+
+    /// <summary>
+    /// Opening the hub must not open the whole of /hub/ -- the allowlist is the
+    /// security boundary, and widening it to fix the handshake would be trading
+    /// one quiet failure for a worse one.
+    /// </summary>
+    [Theory]
+    [InlineData("/hub/admin")]
+    [InlineData("/hub/session/../operator")]
+    [InlineData("/hubsession/negotiate")]
+    public void Opening_the_handshake_does_not_open_anything_else(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path), $"{path} must NOT be reachable");
+    }
+
+    /// <summary>
     /// The console and everything that can change or end a session. A stranger
     /// reaching any of these is the reason the allowlist exists.
     /// </summary>

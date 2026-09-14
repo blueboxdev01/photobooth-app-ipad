@@ -81,6 +81,12 @@ public static class GuestEndpoint
     [
         "/display",
         "/hub/session",
+
+        // SignalR agrees a transport before it connects anything, by POSTing
+        // here first. Allowing the hub and not its handshake gives the iPad a
+        // page that loads perfectly and then sits on "Connecting..." for ever,
+        // with no error anywhere to say why.
+        "/hub/session/negotiate",
         "/api/state",
         "/api/delivery",
         "/api/photos/",
