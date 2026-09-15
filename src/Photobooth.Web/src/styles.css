@@ -472,6 +472,44 @@ a.button, .btn.button {
 .templates__panel { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .templates__preview { min-width: 0; }
 .templates__preview .strip { max-width: 100%; max-height: min(62vh, 620px); width: auto; }
+/* The codes a guest is shown at the end of a session. Large, because they are
+   read across a booth by someone holding a phone up. */
+.handout { display: flex; gap: clamp(16px, 4vw, 44px); align-items: flex-start; }
+.handout__step { margin: 0; text-align: center; }
+.handout__step img {
+  display: block; width: min(30vh, 300px); height: auto;
+  background: #fff; padding: 14px; border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .35);
+  /* A QR is a grid of hard squares; smoothing it is what makes one that will
+     not scan. */
+  image-rendering: pixelated;
+}
+.handout__step figcaption {
+  margin-top: 12px; font-size: clamp(15px, 1.9vw, 22px); font-weight: 600;
+  color: rgba(255, 255, 255, .9);
+}
+.handout__ssid {
+  display: inline-block; margin-top: 4px; font-family: var(--mono);
+  font-size: .9em; color: rgba(255, 255, 255, .72);
+}
+
+/* The two-step iPad setup, side by side so the order is obvious. */
+.ipad { display: flex; gap: 18px; flex-wrap: wrap; margin: 12px 0 4px; }
+.ipad__step {
+  margin: 0; flex: 1 1 220px; min-width: 200px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px; background: var(--surface);
+}
+.ipad__step img {
+  display: block; width: 100%; max-width: 190px; height: auto; margin: 0 auto 10px;
+  background: #fff; padding: 8px; border-radius: 8px;
+  /* A QR is a grid of hard squares; smoothing it on the way up is what makes
+     one that will not scan. */
+  image-rendering: pixelated;
+}
+.ipad__step figcaption { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+.ipad__step code { word-break: break-all; font-size: 11.5px; }
+
 .placeholder {
   margin: 0; padding: 20px; border: 1px dashed var(--line-strong);
   border-radius: var(--radius); color: var(--ink-faint); font-size: 12.5px;

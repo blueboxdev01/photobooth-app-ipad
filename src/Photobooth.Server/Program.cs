@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Photobooth.Cameras;
 using Photobooth.Core;
@@ -119,6 +120,49 @@ builder.Services.PostConfigure<SessionSettings>(o =>
         settingsStore.Current.NoPhotoTimeoutSeconds ?? o.NoPhotoTimeoutSeconds;
 });
 
+// The booth's own certificate authority. Created on first run; the root is what
+// an iPad installs once, and the leaf is reissued below on every start so a
+// change of venue or address needs nothing done to the iPad.
+var certificates = BoothCertificates.Load(ResolveAppPath("data"));
+builder.Services.AddSingleton(certificates);
+
+// Resolved once, and registered so that everything reading these options sees
+// the same answer Kestrel bound its ports from. Configuring it separately for
+// dependency injection is what produced a booth that served the guest display
+// while Setup swore a restart was still needed.
+var guest = GuestDisplayOptions.Resolve(
+    builder.Configuration, settingsStore.Current.GuestDisplayOnNetwork);
+
+builder.Services.AddSingleton<IOptions<GuestDisplayOptions>>(Options.Create(guest));
+
+// Explicit listeners rather than the Urls setting, so the three endpoints are
+// visible in one place and cannot be half-overridden by configuration.
+var operatorPort = OperatorPort(builder.Configuration);
+builder.WebHost.ConfigureKestrel(kestrel =>
+{
+    // The operator console never leaves this machine. localhost is also already
+    // a secure context, so the laptop's own browser keeps its camera access.
+    kestrel.ListenLocalhost(operatorPort);
+
+    if (!guest.Enabled)
+    {
+        return;
+    }
+
+    kestrel.ListenAnyIP(guest.CertPort);
+    kestrel.ListenAnyIP(guest.DisplayPort,
+        listen => listen.UseHttps(certificates.IssueServerCertificate()));
+});
+
+static int OperatorPort(IConfiguration configuration)
+{
+    var urls = configuration["Urls"];
+    return !string.IsNullOrWhiteSpace(urls)
+        && Uri.TryCreate(urls.Split(';')[0], UriKind.Absolute, out var parsed)
+            ? parsed.Port
+            : 5000;
+}
+
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WatchFolderCamera>();
 builder.Services.AddSingleton<ICameraDevice>(sp => sp.GetRequiredService<WatchFolderCamera>());
@@ -143,6 +187,19 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<UploadQueue>());
 
 var app = builder.Build();
 
+// Before anything else: the network-facing ports serve the guest display and the
+// certificate, and refuse the operator console and every session command.
+if (guest.Enabled)
+{
+    app.UseGuestEndpointRules(guest, certificates);
+
+    app.Logger.LogInformation(
+        "Guest display reachable at https://{Host}:{Port}/display "
+        + "(certificate from http://{Host}:{CertPort}/, root {Thumbprint}).",
+        BoothCertificates.PreferredHost(), guest.DisplayPort,
+        BoothCertificates.PreferredHost(), guest.CertPort, certificates.AuthorityThumbprint);
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -155,7 +212,9 @@ app.MapGet("/api/state", (
     WatchFolderCamera camera,
     SessionEngine engine,
     SessionCoordinator coordinator,
-    FileTemplateProvider templates) =>
+    FileTemplateProvider templates,
+    SettingsStore settings,
+    SessionArchive archive) =>
 {
     // The shape of one photo on the strip, so the guest screen can draw a
     // framing guide that matches the template actually in use rather than the
@@ -177,6 +236,17 @@ app.MapGet("/api/state", (
         session = engine.Snapshot,
         delivery = coordinator.CurrentDelivery(),
         slotAspect,
+
+        // Where finished sessions are written. The console used to show only a
+        // folder *name*, which is no help in finding one.
+        outputFolder = archive.Root,
+
+        guestGallery = new
+        {
+            enabled = settings.Current.GuestGalleryEnabled ?? false,
+            ssid = settings.Current.GuestWifiSsid,
+        },
+
         build = new { version = DiagnosticsService.Version },
     });
 });
@@ -185,6 +255,51 @@ app.MapGet("/api/state", (
 
 app.MapGet("/api/delivery", (SessionCoordinator coordinator) =>
     Results.Ok(coordinator.CurrentDelivery()));
+
+// --- guest display on an iPad ---
+
+// Scanned from the iPad rather than typed. Not on the guest allowlist, so it is
+// reachable only from this machine.
+// The two codes a guest is shown at the end of a session. Reachable from the
+// display port, because that is where the guest screen runs.
+app.MapGet("/api/guest-gallery/qr", (
+    string target, string? token, SettingsStore store, IOptions<GuestDisplayOptions> options) =>
+{
+    if (target == "join")
+    {
+        var ssid = store.Current.GuestWifiSsid;
+        if (string.IsNullOrWhiteSpace(ssid))
+        {
+            return Results.NotFound();
+        }
+
+        return Results.File(
+            QrRenderer.Png(GuestGalleryLinks.JoinPayload(ssid, store.Current.GuestWifiPassword)),
+            "image/png");
+    }
+
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.NotFound();
+    }
+
+    var url = GuestGalleryLinks.PhotosUrl(
+        GuestGalleryLinks.GuestHost(store.Current.GuestPhotosAddress),
+        options.Value.CertPort,
+        token);
+
+    return Results.File(QrRenderer.Png(url), "image/png");
+});
+
+app.MapGet("/api/guest-display/qr", (string target, IOptions<GuestDisplayOptions> options) =>
+{
+    var host = BoothCertificates.PreferredHost();
+    var url = target == "cert"
+        ? $"http://{host}:{options.Value.CertPort}/"
+        : $"https://{host}:{options.Value.DisplayPort}/display";
+
+    return Results.File(QrRenderer.Png(url), "image/png");
+});
 
 // Sign in to the booth's Google account. Deliberately only reachable from Setup:
 // this opens a browser window, which must never happen over a guest display

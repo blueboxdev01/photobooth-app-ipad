@@ -16,6 +16,11 @@ namespace Photobooth.Core;
 /// the pose rather than showing a bare countdown, and is what stops a retake of
 /// photo two being announced as photo four.
 /// </param>
+/// <param name="Token">
+/// The finished session's own unguessable id, once there is one. It is what a
+/// guest's link carries, so the screen can offer a code for these photos and no
+/// one else's.
+/// </param>
 /// <param name="Order">
 /// For each entry in <paramref name="Photos"/>, the 0-based position it was
 /// captured in. Lets the console label a thumbnail "shot 4" after it has been
@@ -32,7 +37,8 @@ public sealed record SessionSnapshot(
     string? Message,
     string? StripUrl = null,
     string? SessionFolder = null,
-    int? RetakingSlot = null)
+    int? RetakingSlot = null,
+    string? Token = null)
 {
     public int CapturedCount => Photos.Count;
 

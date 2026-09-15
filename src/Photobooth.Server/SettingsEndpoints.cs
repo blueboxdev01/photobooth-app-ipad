@@ -21,7 +21,12 @@ public sealed record SettingsUpdate(
     string? DisplayBackgroundColor,
     bool? ClearDisplayBackgroundImage,
     bool? DriveEnabled,
-    string? DriveFolderName);
+    string? DriveFolderName,
+    bool? GuestDisplayOnNetwork,
+    bool? GuestGalleryEnabled,
+    string? GuestWifiSsid,
+    string? GuestWifiPassword,
+    string? GuestPhotosAddress);
 
 /// <summary>
 /// Everything an operator sets up per event: where the camera's photos arrive,
@@ -41,10 +46,14 @@ public static class SettingsEndpoints
             FileTemplateProvider templates,
             IOptions<SessionSettings> session,
             IOptions<DriveOptions> drive,
+            IOptions<GuestDisplayOptions> guestDisplay,
+            BoothCertificates certificates,
             DriveAuth driveAuth,
             UploadQueue uploads) =>
         {
             var current = templates.Current;
+            var usableAddresses = BoothAddresses.UsableOnThisMachine();
+
             return Results.Ok(new
             {
                 watchFolder = camera.WatchFolderPath,
@@ -82,6 +91,48 @@ public static class SettingsEndpoints
                     backgroundImage = store.Current.DisplayBackgroundImage is null
                         ? null
                         : "/api/settings/display-background",
+                },
+
+                guestGallery = new
+                {
+                    enabled = store.Current.GuestGalleryEnabled ?? false,
+                    ssid = store.Current.GuestWifiSsid,
+                    hasPassword = !string.IsNullOrEmpty(store.Current.GuestWifiPassword),
+                    photosHost = GuestGalleryLinks.GuestHost(store.Current.GuestPhotosAddress),
+                    photosPort = guestDisplay.Value.CertPort,
+
+                    // Every address a guest link could carry, so the operator can
+                    // see what the automatic pick chose and overrule it. The
+                    // adapter name is the point: two private addresses are not
+                    // tellable apart without it.
+                    addresses = usableAddresses.Select(a => new
+                    {
+                        address = a.Address,
+                        adapter = a.Adapter,
+                        a.Kind,
+                    }),
+                    preferredAddress = store.Current.GuestPhotosAddress,
+
+                    // A choice saved at the last venue is a dead address at this
+                    // one. Said out loud rather than silently ignored.
+                    preferredMissing = !string.IsNullOrWhiteSpace(store.Current.GuestPhotosAddress)
+                        && !BoothAddresses.IsAvailable(store.Current.GuestPhotosAddress, usableAddresses),
+                },
+
+                guestDisplay = new
+                {
+                    // What is running right now. The switch below writes the
+                    // setting, but Kestrel binds its ports once at startup, so
+                    // the two disagree until the booth is restarted.
+                    running = guestDisplay.Value.Enabled,
+                    wanted = store.Current.GuestDisplayOnNetwork ?? guestDisplay.Value.Enabled,
+                    host = BoothCertificates.PreferredHost(),
+                    certUrl = $"http://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.CertPort}/",
+                    displayUrl =
+                        $"https://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.DisplayPort}/display",
+                    authorityThumbprint = certificates.AuthorityThumbprint,
+                    authorityExpires = certificates.AuthorityExpires,
+                    addresses = BoothCertificates.Addresses().Select(a => a.ToString()),
                 },
 
                 delivery = new
@@ -180,6 +231,64 @@ public static class SettingsEndpoints
                 settings.DriveEnabled = driveEnabled;
             }
 
+            if (update.GuestDisplayOnNetwork is { } onNetwork)
+            {
+                settings.GuestDisplayOnNetwork = onNetwork;
+            }
+
+            if (update.GuestGalleryEnabled is { } gallery)
+            {
+                settings.GuestGalleryEnabled = gallery;
+            }
+
+            if (update.GuestWifiSsid is { } ssid)
+            {
+                var trimmed = ssid.Trim();
+
+                // A network name is at most 32 bytes by the standard; anything
+                // longer is a typo, and would make a join code nothing can read.
+                if (System.Text.Encoding.UTF8.GetByteCount(trimmed) > 32)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "A wifi network name is at most 32 characters.",
+                    });
+                }
+
+                settings.GuestWifiSsid = trimmed.Length == 0 ? null : trimmed;
+            }
+
+            if (update.GuestWifiPassword is { } password)
+            {
+                settings.GuestWifiPassword = password.Length == 0 ? null : password;
+            }
+
+            if (update.GuestPhotosAddress is { } photosAddress)
+            {
+                var wanted = photosAddress.Trim();
+
+                if (wanted.Length == 0)
+                {
+                    // Back to automatic.
+                    settings.GuestPhotosAddress = null;
+                }
+                else if (!BoothAddresses.IsAvailable(wanted, BoothAddresses.UsableOnThisMachine()))
+                {
+                    // Only an address this machine actually answers on. Accepting
+                    // a typed one would let the booth advertise a link nothing
+                    // can reach, which is the failure this setting exists to stop.
+                    return Results.BadRequest(new
+                    {
+                        error = $"This booth has no address {wanted} right now. "
+                              + "Pick one of the addresses listed, or choose automatically.",
+                    });
+                }
+                else
+                {
+                    settings.GuestPhotosAddress = wanted;
+                }
+            }
+
             if (update.DriveFolderName is { } driveFolder)
             {
                 var trimmed = driveFolder.Trim();
@@ -268,6 +377,8 @@ public static class SettingsEndpoints
             store.Save(settings);
 
             var current = templates.Current;
+            var usableAddresses = BoothAddresses.UsableOnThisMachine();
+
             return Results.Ok(new
             {
                 watchFolder = camera.WatchFolderPath,

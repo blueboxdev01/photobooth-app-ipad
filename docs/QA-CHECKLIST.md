@@ -198,6 +198,66 @@ measured against the R50's. Verify it honestly:
 
 ---
 
+## Section 8b — The iPad as the guest display
+
+Skip if you are using a monitor. Setup is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**.
+
+- [ ] Certificate installed **and trusted** under Certificate Trust Settings
+- [ ] Display opens with a **padlock**, and the **mirror appears**
+- [ ] It is the **front** camera, not the rear one
+- [ ] Added to the Home Screen and launched from there — fullscreen, no Safari bars
+- [ ] Guided Access on, so a guest cannot exit the display
+- [ ] Left idle **15 minutes** — the screen does not dim or sleep
+- [ ] Framing brackets match the template, and you have **recalibrated** them
+      against the iPad's lens
+
+**What must not be reachable from the iPad.** Try each; all should fail:
+
+| On the iPad, open | Expected | ✓ |
+|---|---|---|
+| `https://<booth>:5002/operator` | Not found | ☐ |
+| `https://<booth>:5002/diagnostics` | Not found | ☐ |
+| `https://<booth>:5002/api/settings` | Not found | ☐ |
+| `https://<booth>:5002/api/session/abort` | Not found | ☐ |
+
+**Surviving the real world:**
+
+- [ ] Restart the booth — the iPad reconnects with **no re-install**
+- [ ] Join a different network — still works, nothing to redo
+- [ ] Turn the wifi off mid-session — the guest screen freezes but the session
+      completes, photos intact
+- [ ] You know the fallback: plug in a monitor, open `/display` on the laptop
+
+---
+
+## Section 8c — Guests downloading their own photos
+
+Skip if you are handing photos over by hand. Setup is
+**[GUEST-PHOTOS.md](GUEST-PHOTOS.md)**.
+
+From **your own phone**, on the booth's wifi:
+
+- [ ] The join code actually joins the network, without typing a password
+- [ ] The photos code opens **your** session
+- [ ] The strip and every photo are there
+- [ ] Download one — it opens, and is named for the session
+- [ ] **Download all as a zip** — it opens, and holds every file
+- [ ] Run a second session: its code shows different photos
+
+**What a guest must not reach.** Try each from the phone; all should refuse:
+
+| On the phone, open | Expected | ✓ |
+|---|---|---|
+| The link with one character changed | "We cannot find those photos" | ☐ |
+| `.../session.json` on your own link | Not found | ☐ |
+| `http://<booth>:<port>/operator` | The iPad setup page, **not** the console | ☐ |
+| `http://<booth>:<port>/api/session/abort` | Same, and the session keeps running | ☐ |
+
+- [ ] Leave the wifi, then open the link again — it should stop working, and you
+      should be comfortable explaining that to a guest
+
+---
+
 ## Section 9 — Delivery and the QR
 
 Skip if you are running without Google Drive.

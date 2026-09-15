@@ -239,6 +239,25 @@ public sealed class SessionArchive(
         return [.. records.OrderByDescending(r => r.CreatedUtc)];
     }
 
+    /// <summary>
+    /// The session a guest's link refers to, or null.
+    ///
+    /// The token is the only credential a guest has, so the comparison is
+    /// ordinal and exact -- and a caller that gets null must not be told whether
+    /// the token was wrong or the session merely gone, since either answer helps
+    /// someone guessing. Deliberately not matched against the folder name, which
+    /// is a date and a time and guessable.
+    /// </summary>
+    public SessionRecord? ByToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        return All().FirstOrDefault(r => string.Equals(r.Token, token, StringComparison.Ordinal));
+    }
+
     public long? FreeDiskBytes()
     {
         try

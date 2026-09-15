@@ -152,7 +152,9 @@ public sealed class SessionCoordinator : IHostedService
             _showing = record.FolderName;
 
             _engine.CompleteComposing(
-                $"/api/sessions/{record.FolderName}/{record.Strip}", record.FolderName);
+                $"/api/sessions/{record.FolderName}/{record.Strip}",
+                record.FolderName,
+                record.Token);
 
             BroadcastDelivery(record);
         }

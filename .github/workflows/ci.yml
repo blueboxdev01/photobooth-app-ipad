@@ -1,0 +1,42 @@
+name: CI
+
+# The release workflow only fires on tags, which is no use for reviewing a
+# branch. This runs on every push and pull request so a reviewer sees a green
+# check -- and so the suite is verified on a machine without whatever local
+# policy happens to be blocking unsigned binaries today.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/Photobooth.Web/package-lock.json
+
+      # The server serves this bundle, so a build that skips it is not a build.
+      - name: Build the frontend
+        working-directory: src/Photobooth.Web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Typecheck the frontend
+        working-directory: src/Photobooth.Web
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: dotnet test --configuration Release --logger "console;verbosity=minimal"
