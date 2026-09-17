@@ -428,6 +428,7 @@ app.MapGet("/api/sessions/{folder}/{file}", (string folder, string file, Session
     {
         ".jpg" or ".jpeg" => "image/jpeg",
         ".png" => "image/png",
+        ".gif" => "image/gif",
         ".json" => "application/json",
         _ => "application/octet-stream",
     };

@@ -26,7 +26,8 @@ public sealed record SettingsUpdate(
     bool? GuestGalleryEnabled,
     string? GuestWifiSsid,
     string? GuestWifiPassword,
-    string? GuestPhotosAddress);
+    string? GuestPhotosAddress,
+    bool? AnimationEnabled);
 
 /// <summary>
 /// Everything an operator sets up per event: where the camera's photos arrive,
@@ -83,6 +84,16 @@ public static class SettingsEndpoints
                         p.Canvas.Width,
                         p.Canvas.Height,
                     }),
+                },
+
+                // An output concern rather than a delivery one: it is a moving
+                // copy of the strip, and it exists whether or not guests are
+                // being served anything over wifi.
+                animation = new
+                {
+                    // On unless turned off, unlike the gallery -- this costs a
+                    // second per session, where the gallery binds network ports.
+                    enabled = store.Current.AnimationEnabled ?? true,
                 },
 
                 display = new
@@ -239,6 +250,11 @@ public static class SettingsEndpoints
             if (update.GuestGalleryEnabled is { } gallery)
             {
                 settings.GuestGalleryEnabled = gallery;
+            }
+
+            if (update.AnimationEnabled is { } animation)
+            {
+                settings.AnimationEnabled = animation;
             }
 
             if (update.GuestWifiSsid is { } ssid)

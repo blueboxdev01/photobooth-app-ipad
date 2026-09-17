@@ -101,9 +101,15 @@ public static class GuestGallery
             return;
         }
 
-        context.Response.ContentType = allowed.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-            ? "image/png"
-            : "image/jpeg";
+        // Declared from the extension rather than assumed. A GIF served as
+        // image/jpeg reaches the phone as a still: iOS trusts the type it was
+        // given when saving to the camera roll, so the animation is simply lost.
+        context.Response.ContentType = Path.GetExtension(allowed).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            _ => "image/jpeg",
+        };
 
         // attachment, so a phone saves it rather than showing it in a tab the
         // guest then has to long-press.
@@ -156,7 +162,8 @@ public static class GuestGallery
     }
 
     /// <summary>
-    /// What a session is willing to hand over: the strip and the photos.
+    /// What a session is willing to hand over: the strip, its animation, and the
+    /// photos.
     ///
     /// Not session.json -- it carries the token, and a guest who forwards their
     /// zip should not be forwarding the key to their own gallery. Not the QR
@@ -165,6 +172,14 @@ public static class GuestGallery
     private static IEnumerable<string> Listed(SessionRecord record)
     {
         yield return record.Strip;
+
+        // Null for a session taken before animations existed, and for any where
+        // building one failed. Guarded rather than yielded blindly, because a
+        // null here would reach the allowlist, the page and the zip loop alike.
+        if (record.Animation is { } animation)
+        {
+            yield return animation;
+        }
 
         foreach (var photo in record.Photos)
         {
@@ -217,10 +232,23 @@ public static class GuestGallery
         {
             var href = $"{Prefix}{Uri.EscapeDataString(record.Token)}/{Uri.EscapeDataString(name)}";
             var isStrip = string.Equals(name, record.Strip, StringComparison.OrdinalIgnoreCase);
-            var label = isStrip ? "The strip" : name.Replace("photo-", "Photo ").Replace(".jpg", "");
+            var isAnimation = string.Equals(name, record.Animation, StringComparison.OrdinalIgnoreCase);
+
+            // Named rather than left to the fallback, which would show a guest
+            // the raw filename.
+            var label = (isStrip, isAnimation) switch
+            {
+                (true, _) => "The strip",
+                (_, true) => "The animation",
+                _ => name.Replace("photo-", "Photo ").Replace(".jpg", ""),
+            };
+
+            // Both the strip and the animation span the grid: one is tall and one
+            // is worth watching, and neither reads at thumbnail size.
+            var wide = isStrip || isAnimation ? " tile--strip" : string.Empty;
 
             return $"""
-                      <a class="tile{(isStrip ? " tile--strip" : "")}" href="{href}" download>
+                      <a class="tile{wide}" href="{href}" download>
                         <img src="{href}" alt="">
                         <span>{WebUtility.HtmlEncode(label)}</span>
                       </a>

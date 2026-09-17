@@ -33,7 +33,7 @@ public sealed class GuestGalleryTests : IDisposable
     }
 
     /// <summary>A real session on disk, with distinguishable file contents.</summary>
-    private SessionRecord Save(string token, DateTimeOffset at)
+    private SessionRecord Save(string token, DateTimeOffset at, bool animated = false)
     {
         Directory.CreateDirectory(_root);
         var strip = Path.Combine(_root, $"src-strip-{token}.jpg");
@@ -51,7 +51,15 @@ public sealed class GuestGalleryTests : IDisposable
             "fake", new TemplateCanvas(600, 1800),
             [new TemplateSlot(0, 0, 1, 0.3), new TemplateSlot(0, 0.35, 1, 0.3)]);
 
-        return _archive.Save(token, template, captures, strip, at);
+        string? gif = null;
+        if (animated)
+        {
+            gif = Path.Combine(_root, $"src-anim-{token}.gif");
+            // A real GIF header, so a content-type claim can be believed.
+            File.WriteAllBytes(gif, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
+        }
+
+        return _archive.Save(token, template, captures, strip, at, gif);
     }
 
     private static DefaultHttpContext Request(string path)
@@ -183,6 +191,72 @@ public sealed class GuestGalleryTests : IDisposable
     private sealed class BodyControl : IHttpBodyControlFeature
     {
         public bool AllowSynchronousIO { get; set; }
+    }
+
+    // --- the animation --------------------------------------------------------
+
+    [Fact]
+    public async Task The_animation_is_offered_and_named()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var (status, body) = await GetAsync($"/g/{record.Token}");
+        var html = Text(body);
+
+        Assert.Equal(200, status);
+        Assert.Contains(record.Animation, html);
+
+        // Named, not left to the fallback that would show a raw filename.
+        Assert.Contains("The animation", html);
+    }
+
+    /// <summary>
+    /// Served as image/gif rather than the image/jpeg everything non-PNG used
+    /// to get. iOS trusts the declared type when saving to the camera roll, so
+    /// the wrong one costs the guest the animation without any error.
+    /// </summary>
+    [Fact]
+    public async Task The_animation_is_served_as_a_gif()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var context = Request($"/g/{record.Token}/{record.Animation}");
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        Assert.Equal(200, context.Response.StatusCode);
+        Assert.Equal("image/gif", context.Response.ContentType);
+    }
+
+    [Fact]
+    public async Task The_zip_carries_the_animation_too()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var (_, body) = await GetAsync($"/g/{record.Token}/all.zip");
+
+        using var zip = new ZipArchive(new MemoryStream(body), ZipArchiveMode.Read);
+        Assert.Contains(zip.Entries, e => e.Name.EndsWith(".gif", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Every session taken before this feature has no animation, and so does any
+    /// session where building one failed. None of them may break.
+    /// </summary>
+    [Fact]
+    public async Task A_session_without_an_animation_is_untouched()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+        Assert.Null(record.Animation);
+
+        var (status, body) = await GetAsync($"/g/{record.Token}");
+        Assert.Equal(200, status);
+        Assert.DoesNotContain(".gif", Text(body));
+
+        var (_, zipped) = await GetAsync($"/g/{record.Token}/all.zip");
+        using var zip = new ZipArchive(new MemoryStream(zipped), ZipArchiveMode.Read);
+
+        // The strip and its photos, and nothing null-shaped in between.
+        Assert.Equal(record.Photos.Count + 1, zip.Entries.Count);
     }
 
     // --- what a link must not reach ------------------------------------------
