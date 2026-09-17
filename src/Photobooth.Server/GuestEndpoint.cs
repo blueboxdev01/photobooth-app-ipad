@@ -114,11 +114,25 @@ public static class GuestEndpoint
             return true;
         }
 
-        // A finished session's QR, which is the last thing the display shows.
-        if (value.StartsWith("/api/sessions/", StringComparison.OrdinalIgnoreCase) &&
-            value.EndsWith("/qr.png", StringComparison.OrdinalIgnoreCase))
+        // What a finished session puts on the guest screen: the strip, its
+        // animation, and the QR.
+        //
+        // Named one at a time rather than allowing the route wholesale. The same
+        // endpoint also serves session.json, which carries the token -- and the
+        // token is the whole of the gallery's security, so a prefix match here
+        // would hand it to anyone on the network who could guess a folder name.
+        //
+        // Allowing only the QR is what gave the iPad "All done" above an empty
+        // white box: the strip returned 404, and a broken image is all a browser
+        // can show for that. The operator console is not behind this allowlist,
+        // so the booth's own screen looked perfect while the guest's did not.
+        if (value.StartsWith("/api/sessions/", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            var file = Path.GetFileName(value);
+
+            return file.Equals("strip.jpg", StringComparison.OrdinalIgnoreCase)
+                || file.Equals("strip.gif", StringComparison.OrdinalIgnoreCase)
+                || file.Equals("qr.png", StringComparison.OrdinalIgnoreCase);
         }
 
         return GuestPaths.Any(allowed =>

@@ -32,6 +32,44 @@ public sealed class GuestEndpointTests
     }
 
     /// <summary>
+    /// The finished session's own files, which is what the guest screen shows
+    /// once the shooting is over.
+    ///
+    /// <para>
+    /// Missing this gave the iPad a display that said "All done" above an empty
+    /// white box: the strip is served from <c>/api/sessions/</c>, only
+    /// <c>qr.png</c> was allowed there, and a broken image is all a browser can
+    /// show for a 404. The operator console was fine throughout, because it is
+    /// not behind this allowlist -- so the fault was invisible from the machine
+    /// running the booth.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.gif")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/qr.png")]
+    public void A_finished_sessions_own_pictures_reach_the_display(string path)
+    {
+        Assert.True(GuestEndpoint.IsGuestPath(path),
+            $"{path} is what the guest screen shows after a session");
+    }
+
+    /// <summary>
+    /// Widening the session route must not have opened the record itself. It
+    /// carries the token, and the token is the whole of the gallery's security.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/session.json")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/session.json.tmp")]
+    [InlineData("/api/sessions")]
+    [InlineData("/api/sessions/")]
+    public void A_sessions_record_is_still_refused(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path),
+            $"{path} must NOT be reachable from the network");
+    }
+
+    /// <summary>
     /// SignalR does not open a socket to the hub address. It first POSTs to
     /// <c>{hub}/negotiate</c> to agree a transport, and only then connects.
     ///
@@ -99,18 +137,32 @@ public sealed class GuestEndpointTests
     }
 
     /// <summary>
-    /// A prefix match that is too loose is how allowlists leak. /api/sessions is
-    /// the whole archive; only a single session's QR belongs on the iPad.
+    /// A prefix match that is too loose is how allowlists leak. <c>/api/sessions</c>
+    /// is the whole archive, so the guest screen gets named files out of it and
+    /// nothing else.
+    ///
+    /// <para>
+    /// This deliberately refused the strip until a tester found the iPad showing
+    /// "All done" over an empty white box. Refusing it was never buying anything:
+    /// <c>qr.png</c> sat allowed beside it, and that QR encodes the link to the
+    /// guest's entire gallery -- strictly more than the one picture being
+    /// guarded. The record stays refused, because that is the part that matters.
+    /// </para>
     /// </summary>
     [Fact]
     public void The_session_archive_is_not_opened_up_by_the_qr_rule()
     {
+        // What the guest screen actually shows once a session is over.
         Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/qr.png"));
+        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg"));
+        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.gif"));
 
+        // The archive listing, the record that carries the token, and the raw
+        // frames -- which the display shows from the watch folder while a session
+        // is live and has no reason to pull out of the archive afterwards.
         Assert.False(GuestEndpoint.IsGuestPath("/api/sessions"));
         Assert.False(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/photo-1.jpg"));
         Assert.False(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/session.json"));
-        Assert.False(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg"));
     }
 
     /// <summary>
