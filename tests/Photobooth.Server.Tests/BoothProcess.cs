@@ -19,6 +19,8 @@ public sealed class BoothProcess : IAsyncLifetime
 {
     private Process? _process;
     private string _data = string.Empty;
+    private Task<string>? _output;
+    private Task<string>? _errors;
 
     public int OperatorPort { get; private set; }
     public int CertPort { get; private set; }
@@ -65,9 +67,11 @@ public sealed class BoothProcess : IAsyncLifetime
         _process = Process.Start(start)
             ?? throw new InvalidOperationException($"Could not start {server}.");
 
-        // Drained, or a full pipe buffer stalls the booth mid-test.
-        _ = _process.StandardOutput.ReadToEndAsync();
-        _ = _process.StandardError.ReadToEndAsync();
+        // Drained, or a full pipe buffer stalls the booth mid-test -- and kept,
+        // because "it exited" is a useless thing to be told when the reason was
+        // printed to a stream that was thrown away.
+        _output = _process.StandardOutput.ReadToEndAsync();
+        _errors = _process.StandardError.ReadToEndAsync();
 
         Operator = new HttpClient { BaseAddress = new Uri($"http://localhost:{OperatorPort}") };
         Guest = new HttpClient { BaseAddress = new Uri($"http://localhost:{CertPort}") };
@@ -99,7 +103,8 @@ public sealed class BoothProcess : IAsyncLifetime
             if (_process!.HasExited)
             {
                 throw new InvalidOperationException(
-                    $"The booth exited with code {_process.ExitCode} before it was listening.");
+                    $"The booth exited with code {_process.ExitCode} before it was "
+                    + $"listening.{Environment.NewLine}{Tail()}");
             }
 
             try
@@ -119,7 +124,8 @@ public sealed class BoothProcess : IAsyncLifetime
         }
 
         throw new TimeoutException(
-            $"The booth never answered on port {OperatorPort}. Last error: {last?.Message}");
+            $"The booth never answered on port {OperatorPort}. Last error: "
+            + $"{last?.Message}{Environment.NewLine}{Tail()}");
     }
 
     /// <summary>
@@ -157,6 +163,24 @@ public sealed class BoothProcess : IAsyncLifetime
         }
 
         return path;
+    }
+
+    /// <summary>Whatever the booth managed to say before it gave up.</summary>
+    private string Tail()
+    {
+        static string Last(Task<string>? stream)
+        {
+            if (stream is null || !stream.IsCompletedSuccessfully)
+            {
+                return "(not captured)";
+            }
+
+            var lines = stream.Result.Split('\n');
+            return string.Join(Environment.NewLine, lines.TakeLast(15)).Trim();
+        }
+
+        return $"--- stderr ---{Environment.NewLine}{Last(_errors)}"
+             + $"{Environment.NewLine}--- stdout ---{Environment.NewLine}{Last(_output)}";
     }
 
     /// <summary>A port nothing is using, so parallel runs do not collide.</summary>

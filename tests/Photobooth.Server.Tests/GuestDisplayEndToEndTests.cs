@@ -186,17 +186,40 @@ public sealed class GuestDisplayEndToEndTests : IClassFixture<BoothProcess>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>
+    /// The record carries the token, and the token is the whole of the gallery's
+    /// security -- so neither network port may hand it over.
+    ///
+    /// <para>
+    /// Asserted on the <b>content</b>, not the status code, and this test had to
+    /// learn that the hard way: it first checked for a 404 and failed against a
+    /// 200. The certificate port answers any unrecognised path with the iPad
+    /// setup page, so it returns 200 while serving nothing of the sort. A status
+    /// code alone would equally have "passed" had the record genuinely been
+    /// served, which makes it the wrong question entirely. What matters is
+    /// whether the token comes back.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task A_sessions_record_is_never_served_to_the_network()
     {
         var folder = await RunSessionAsync();
 
-        foreach (var port in new[] { _booth.DisplayPort, _booth.CertPort })
-        {
-            var client = port == _booth.DisplayPort ? _booth.Display : _booth.Guest;
-            var response = await client.GetAsync($"/api/sessions/{folder}/session.json");
+        // Taken from the console, which is allowed to see it, so the test knows
+        // the real secret rather than a guess at its shape.
+        var record = await _booth.Operator.GetStringAsync($"/api/sessions/{folder}/session.json");
+        var token = System.Text.Json.JsonDocument.Parse(record)
+            .RootElement.GetProperty("token").GetString();
 
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.False(string.IsNullOrWhiteSpace(token), "the session had no token to protect");
+
+        foreach (var client in new[] { _booth.Display, _booth.Guest })
+        {
+            var response = await client.GetAsync($"/api/sessions/{folder}/session.json");
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.DoesNotContain(token!, body, StringComparison.Ordinal);
+            Assert.DoesNotContain("sourceFiles", body, StringComparison.Ordinal);
         }
     }
 
