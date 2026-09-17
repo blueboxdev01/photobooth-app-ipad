@@ -16,8 +16,13 @@ At the end of a session the guest screen shows two codes:
    iOS and Android join from the camera app without typing a password.
 2. **Scan for your photos** — their own session, and nobody else's.
 
-The page has the strip, each photo, and a **Download all as a zip**, because a
-phone taking six files one at a time is something people give up on halfway.
+The page has the strip, **a looping GIF of it**, each photo, and a **Download
+all as a zip**, because a phone taking six files one at a time is something
+people give up on halfway.
+
+The GIF is the same strip with the photos rotating through its slots. It is
+about 160 KB, so it downloads as quickly as a single photo, and it can be
+turned off in **Setup > Animated GIF** if a queue is building.
 
 ---
 

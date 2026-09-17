@@ -162,6 +162,12 @@ network port allowed the live-updates channel but not the handshake that opens
 it, so the display could never connect and nothing reported an error. Fixed in
 **v0.12.2**; upgrade rather than hunting for a cause.
 
+**"All done" appears over an empty white box.** The strip could not be
+fetched. On **v0.12.3 and older this was a bug in the booth**: the network
+port served the QR but not the strip beside it, and a broken image is all a
+browser can show for that. The operator console was unaffected, so the booth
+'s own screen looked fine. Fixed in **v0.13.0**.
+
 **The mirror is missing but the page loads.** Safari was denied the camera:
 **Settings → Apps → Safari → Camera → Allow**, then reload. If the page is on
 `http://` rather than `https://`, no permission will help — open the HTTPS URL.
