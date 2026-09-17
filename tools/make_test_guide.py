@@ -1,4 +1,4 @@
-"""Build the field guide PDF for the v0.12.2 guest-photo test.
+"""Build the field guide PDF for the v0.12.3 guest-photo test.
 
 Laid out for someone working through it at a laptop with the page beside them:
 every action is a numbered step with a box to tick, and every stage ends with
@@ -15,7 +15,7 @@ from reportlab.platypus import (
     Spacer, Table, TableStyle, KeepTogether,
 )
 
-OUT = r"C:\Users\edwar\Projects\photobooth-app-ipad\docs\Photobooth-v0.12.2-Test-Guide.pdf"
+OUT = r"C:\Users\edwar\Projects\photobooth-app-ipad\docs\Photobooth-v0.12.3-Test-Guide.pdf"
 
 INK = colors.HexColor("#14161A")
 SOFT = colors.HexColor("#5B6270")
@@ -158,7 +158,7 @@ def furniture(canvas, doc):
     canvas.setFont("Helvetica", 7.5)
     canvas.setFillColor(SOFT)
     canvas.drawString(MARGIN, 11 * mm,
-                      "Photobooth v0.12.2-ipad  |  Guest photo delivery test")
+                      "Photobooth v0.12.3-ipad  |  Guest photo delivery test")
     canvas.drawRightString(PAGE_W - MARGIN, 11 * mm, f"Page {doc.page}")
     canvas.setStrokeColor(LINE)
     canvas.setLineWidth(0.5)
@@ -175,7 +175,7 @@ E = story.extend
 A(Paragraph("Testing guest photo delivery", S_TITLE))
 A(Spacer(1, 4))
 A(Paragraph(
-    "Photobooth <b>v0.12.2-ipad</b> &nbsp;&middot;&nbsp; step by step, from "
+    "Photobooth <b>v0.12.3-ipad</b> &nbsp;&middot;&nbsp; step by step, from "
     "unzipping the build to a guest holding their photos.", S_SUB))
 A(Spacer(1, 12))
 
@@ -190,7 +190,7 @@ A(table(
          "This laptop, <b>one phone with a camera</b>, and the release ZIP. "
          "The Canon camera is optional &mdash; there is a mock camera built in."],
         ["Version to quote",
-         "<b>0.12.2-ipad</b>, shown at the foot of the left-hand rail. Please "
+         "<b>0.12.3-ipad</b>, shown at the foot of the left-hand rail. Please "
          "include it with any result so it cannot be confused with the v0.10.0 build."],
     ],
     [30 * mm, CONTENT_W - 30 * mm]))
@@ -214,7 +214,7 @@ E(rule())
 
 E(stage(1, "Install and open the booth"))
 A(steps([
-    "Download <b>photobooth-v0.12.2-win-x64.zip</b> from the release page and "
+    "Download <b>photobooth-v0.12.3-win-x64.zip</b> from the release page and "
     "unzip it to somewhere easy, such as your Desktop. Unzip it properly &mdash; "
     "running from inside the zip preview will fail in confusing ways.",
 
@@ -224,7 +224,7 @@ A(steps([
 
     "Open <b>http://localhost:5000/operator</b> in a browser on this laptop.",
 
-    "Look at the foot of the left-hand rail. It should read <b>0.12.2-ipad</b>. "
+    "Look at the foot of the left-hand rail. It should read <b>0.12.3-ipad</b>. "
     "Write it down now: ________________________",
 ], 1))
 
@@ -573,7 +573,7 @@ doc = BaseDocTemplate(
     OUT, pagesize=A4,
     leftMargin=MARGIN, rightMargin=MARGIN,
     topMargin=MARGIN, bottomMargin=22 * mm,
-    title="Photobooth v0.12.2 - Guest photo delivery test guide",
+    title="Photobooth v0.12.3 - Guest photo delivery test guide",
     author="Photobooth",
     subject="Step-by-step test guide, setup through delivery",
 )
