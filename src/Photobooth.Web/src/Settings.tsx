@@ -228,7 +228,7 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <section className="settings">
-      <h2>Setup</h2>
+      <h2>Settings</h2>
 
       {status && <p className={status.ok ? 'muted' : 'banner'}>{status.text}</p>}
 
