@@ -178,23 +178,21 @@ put a wrong photo on a strip.
 
 On the actual monitor, at its actual resolution, fullscreen.
 
-- [ ] Mirror is large and legible from where a guest stands
-- [ ] Feed is **mirrored** (raise your right hand; it appears on the right)
-- [ ] Corner brackets match the **template you are using** — change output size and check they change
-- [ ] Head-room line and centre mark visible
-- [ ] Outside the brackets is dimmed, so the crop is obvious
-- [ ] Countdown legible from **two metres**
+- [ ] Attract screen reads **Step in and smile**, with the empty slots below
+- [ ] Countdown legible from **two metres** — it should fill the screen
+- [ ] Each shot appears in its slot as it is taken
+- [ ] Review shows the shots large enough to judge from where a guest stands
+- [ ] Finished strip and its QR are both readable from a normal distance
 - [ ] Nothing important is cut off by overscan
 - [ ] Backdrop colour or image appears
 
-**The framing guide is uncalibrated.** The webcam's field of view has never been
-measured against the R50's. Verify it honestly:
+**There is no live preview.** The screen shows only what the booth knows: the
+count, the shots already taken, and the strip. A guest cannot check their
+framing before the shutter fires, so the thing to judge here is whether the
+booth is marked well enough that they stand in the right place to begin with.
 
-1. Stand so you exactly fill the brackets.
-2. Take a shot.
-3. Compare the strip against what the guide promised.
-
-- [ ] The guide is close enough to trust, **or** written down how far out it is
+- [ ] Guests end up framed without being told where to stand, **or** the floor
+      is marked
 
 ---
 
@@ -203,13 +201,10 @@ measured against the R50's. Verify it honestly:
 Skip if you are using a monitor. Settings is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**.
 
 - [ ] Certificate installed **and trusted** under Certificate Trust Settings
-- [ ] Display opens with a **padlock**, and the **mirror appears**
-- [ ] It is the **front** camera, not the rear one
+- [ ] Display opens with a **padlock**, and the attract screen appears
 - [ ] Added to the Home Screen and launched from there — fullscreen, no Safari bars
 - [ ] Guided Access on, so a guest cannot exit the display
 - [ ] Left idle **15 minutes** — the screen does not dim or sleep
-- [ ] Framing brackets match the template, and you have **recalibrated** them
-      against the iPad's lens
 
 **What must not be reachable from the iPad.** Try each; all should fail:
 
@@ -319,7 +314,6 @@ Things that will happen at an event.
 |---|---|---|
 | Kill the app mid-session, restart | Comes back clean; earlier sessions intact | ☐ |
 | Restart with a session waiting to upload | It uploads without being asked | ☐ |
-| Unplug the webcam mid-session | Capture still works; mirror shows an error, not a blank screen | ☐ |
 | Close the guest display browser window, reopen | Reconnects to the running session | ☐ |
 | Change the watch folder mid-event | Applies immediately, no restart | ☐ |
 

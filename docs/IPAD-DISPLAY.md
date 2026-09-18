@@ -1,7 +1,8 @@
 # Setting up the iPad as the guest display
 
-The iPad replaces both the external monitor **and** the USB webcam: it shows the
-countdown, the shots and the QR, and its front camera is the posing mirror.
+The iPad replaces the external monitor: it shows the countdown, the shots as
+they are taken, the review, and the finished strip with the QR code for
+downloading it.
 
 **Twenty minutes the first time**, most of it on the iPad. After that, starting a
 booth is opening one page.
@@ -14,7 +15,7 @@ booth is opening one page.
 |---|---|
 | **A network you control** | Your own travel router, or the laptop's hotspot. **Not a venue's wifi** — see [If the iPad cannot reach the booth](#if-the-ipad-cannot-reach-the-booth) |
 | **iPadOS 16.4 or newer** | Older versions have no wake lock, so the iPad will sleep mid-event |
-| **A stand or mount** | The iPad's front camera is now the mirror, so it has to sit where the webcam did: facing the guests, near the R50 |
+| **A stand or mount** | Anywhere the guests can read it. It no longer has to sit near the lens, since nothing on it is a camera any more |
 
 Both devices must be on the **same network**. The booth does not need internet —
 only Google Drive uploads do.
@@ -23,14 +24,21 @@ only Google Drive uploads do.
 
 ## Why any of this is necessary
 
-A browser will not give a web page the camera unless the page is a **secure
-context** — HTTPS, or localhost. The posing mirror is a camera, so an iPad
-opening `http://192.168.1.50:5000/display` gets no mirror at all, and no setting
-changes that.
+The display has to **stay awake**. An iPad left to itself dims and then sleeps
+mid-event, which reads as a broken booth rather than a sleeping one — and the
+Wake Lock API that prevents it is only handed to a **secure context**: HTTPS,
+or localhost. Over plain `http://192.168.1.50:5000/display` there is no wake
+lock, and no setting changes that.
 
 No public certificate authority will issue a certificate for a laptop on your
 wifi. So **the booth runs its own authority**, and the iPad is told once to trust
 it. That is the whole of what the steps below do.
+
+> **This used to be about the posing mirror**, which needed the camera and so
+> needed the same secure context. The mirror has gone — the iPad framed the
+> shot differently from the R50 standing beside it, so guests posed to a
+> picture that was not the one being taken. The wake lock still wants HTTPS,
+> which is why the certificate stays.
 
 ---
 
@@ -86,9 +94,10 @@ changing IP does not undo it.
 Scan the **second** QR code. Safari opens the guest display and should show:
 
 - a **padlock** in the address bar
-- the **mirror**, with your own face in it
+- the attract screen — **Step in and smile**, and the empty photo slots
 
-If you get the mirror, everything is working.
+If you get that, everything is working. Arm a session from the console and the
+iPad should count down with it.
 
 ### Make it behave like a booth screen
 
@@ -97,7 +106,7 @@ If you get the mirror, everything is working.
 | **Add to Home Screen** | Share → *Add to Home Screen*, then launch from that icon. Runs fullscreen with no Safari chrome |
 | **Guided Access** | Settings → Accessibility → Guided Access. Triple-click the side button to lock the iPad into the display so a guest cannot exit it |
 | **Auto-Lock** | Settings → Display & Brightness → Auto-Lock → **Never**, as a belt-and-braces backstop. The app already holds a wake lock |
-| **Orientation lock** | So nobody turns the mirror sideways mid-session |
+| **Orientation lock** | So nobody turns the display sideways mid-session |
 
 ---
 
@@ -119,19 +128,6 @@ else on the machine wants them.
 
 ---
 
-## Recalibrate the framing guide
-
-The guide on the guest screen shows what survives onto the strip. It was never
-calibrated against the R50 to begin with, and the iPad's lens is a different
-field of view from the webcam's — so whatever you previously learned about it no
-longer applies.
-
-1. Stand so you exactly fill the corner brackets.
-2. Take a shot.
-3. Compare the strip against what the guide promised.
-4. Write down how far out it is.
-
----
 
 ## If the iPad cannot reach the booth
 
@@ -168,12 +164,9 @@ port served the QR but not the strip beside it, and a broken image is all a
 browser can show for that. The operator console was unaffected, so the booth
 's own screen looked fine. Fixed in **v0.13.0**.
 
-**The mirror is missing but the page loads.** Safari was denied the camera:
-**Settings → Apps → Safari → Camera → Allow**, then reload. If the page is on
-`http://` rather than `https://`, no permission will help — open the HTTPS URL.
-
-**It shows the rear camera.** Reload the page. The app asks for the front camera
-explicitly, so this means the request was made before the iPad was ready.
+**The iPad dims or sleeps during an event.** The wake lock needs the HTTPS
+address and iPadOS 16.4 or newer. Check the padlock is there, then set
+**Settings → Display & Brightness → Auto-Lock → Never** as well.
 
 ---
 

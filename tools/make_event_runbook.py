@@ -237,7 +237,7 @@ A(ticks([
     "Run one full session end to end with the real camera.",
     "From your own phone: join the wifi, scan both codes, download a photo "
     "<b>and</b> the zip, and open them.",
-    "iPad: display loads, mirror shows your face, <b>Auto-Lock Never</b>, "
+    "iPad: display loads and shows the attract screen, <b>Auto-Lock Never</b>, "
     "Guided Access on, and <b>plugged in</b>.",
     "Write the booth's details into the box on the last page.",
 ]))
@@ -362,12 +362,9 @@ A(fixes([
      "covers addresses present when the app started."),
     ("The iPad screen keeps sleeping",
      "Auto-Lock &rsaquo; <b>Never</b>, and keep it on a charger."),
-    ("Page loads but there is no mirror",
-     "Settings &rsaquo; Apps &rsaquo; Safari &rsaquo; Camera &rsaquo; "
-     "<b>Allow</b>, then reload. If the address starts <b>http://</b> rather "
-     "than https, no permission will help."),
-    ("It shows the rear camera",
-     "Reload the page."),
+    ("The iPad shows nothing but Connecting",
+     "It cannot reach the booth. Check both are on the <b>same wifi</b>, and "
+     "that the address still matches the one on Settings."),
     ("The iPad is dead or unusable",
      "<b>Plug a monitor into the laptop</b> and open "
      "<b>http://localhost:5000/display</b>. A complete fallback that needs no "
