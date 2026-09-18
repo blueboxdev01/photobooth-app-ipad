@@ -1,0 +1,201 @@
+using Microsoft.AspNetCore.Http;
+using Photobooth.Server;
+
+namespace Photobooth.Server.Tests;
+
+/// <summary>
+/// What the network-facing port will and will not answer.
+///
+/// This is the boundary that keeps a venue's wifi out of a running booth. The
+/// failure it exists to prevent is quiet: everything looks fine, and a stranger
+/// on the guest network can abort a session or pull a diagnostics bundle.
+/// </summary>
+public sealed class GuestEndpointTests
+{
+    /// <summary>Everything the guest display needs in order to work at all.</summary>
+    [Theory]
+    [InlineData("/display")]
+    [InlineData("/hub/session")]
+    [InlineData("/api/state")]
+    [InlineData("/api/delivery")]
+    [InlineData("/api/photos/IMG_0001.JPG")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/qr.png")]
+    [InlineData("/api/settings/display-background")]
+    [InlineData("/assets/index-abc123.js")]
+    [InlineData("/assets/index-abc123.css")]
+    [InlineData("/")]
+    [InlineData("/index.html")]
+    [InlineData("/favicon.ico")]
+    public void The_guest_display_is_served(string path)
+    {
+        Assert.True(GuestEndpoint.IsGuestPath(path), $"{path} must reach the iPad");
+    }
+
+    /// <summary>
+    /// The finished session's own files, which is what the guest screen shows
+    /// once the shooting is over.
+    ///
+    /// <para>
+    /// Missing this gave the iPad a display that said "All done" above an empty
+    /// white box: the strip is served from <c>/api/sessions/</c>, only
+    /// <c>qr.png</c> was allowed there, and a broken image is all a browser can
+    /// show for a 404. The operator console was fine throughout, because it is
+    /// not behind this allowlist -- so the fault was invisible from the machine
+    /// running the booth.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.gif")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/qr.png")]
+    public void A_finished_sessions_own_pictures_reach_the_display(string path)
+    {
+        Assert.True(GuestEndpoint.IsGuestPath(path),
+            $"{path} is what the guest screen shows after a session");
+    }
+
+    /// <summary>
+    /// Widening the session route must not have opened the record itself. It
+    /// carries the token, and the token is the whole of the gallery's security.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/session.json")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/session.json.tmp")]
+    [InlineData("/api/sessions")]
+    [InlineData("/api/sessions/")]
+    public void A_sessions_record_is_still_refused(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path),
+            $"{path} must NOT be reachable from the network");
+    }
+
+    /// <summary>
+    /// SignalR does not open a socket to the hub address. It first POSTs to
+    /// <c>{hub}/negotiate</c> to agree a transport, and only then connects.
+    ///
+    /// <para>
+    /// Allowing the hub itself and not its handshake is a booth that serves the
+    /// iPad a page which then sits on "Connecting..." forever. The page loads,
+    /// the certificate is fine, the address is right, and nothing anywhere
+    /// reports an error -- so it reads as a broken app. A tester lost an evening
+    /// to exactly this.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("/hub/session/negotiate")]
+    [InlineData("/hub/session/negotiate?negotiateVersion=1")]
+    public void The_hubs_handshake_is_served_as_well_as_the_hub(string path)
+    {
+        // A query string is not part of the path ASP.NET matches on, but the
+        // literal form is pinned here so nobody "tidies" the rule and breaks it.
+        var justThePath = path.Split('?')[0];
+
+        Assert.True(
+            GuestEndpoint.IsGuestPath(justThePath),
+            "without the negotiate handshake the display never connects");
+    }
+
+    /// <summary>
+    /// Opening the hub must not open the whole of /hub/ -- the allowlist is the
+    /// security boundary, and widening it to fix the handshake would be trading
+    /// one quiet failure for a worse one.
+    /// </summary>
+    [Theory]
+    [InlineData("/hub/admin")]
+    [InlineData("/hub/session/../operator")]
+    [InlineData("/hubsession/negotiate")]
+    public void Opening_the_handshake_does_not_open_anything_else(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path), $"{path} must NOT be reachable");
+    }
+
+    /// <summary>
+    /// The console and everything that can change or end a session. A stranger
+    /// reaching any of these is the reason the allowlist exists.
+    /// </summary>
+    [Theory]
+    [InlineData("/operator")]
+    [InlineData("/diagnostics")]
+    [InlineData("/templates")]
+    [InlineData("/api/settings")]
+    [InlineData("/api/settings/check-folder")]
+    [InlineData("/api/session/arm")]
+    [InlineData("/api/session/abort")]
+    [InlineData("/api/session/accept")]
+    [InlineData("/api/session/retake/2")]
+    [InlineData("/api/session/order")]
+    [InlineData("/api/mock/press")]
+    [InlineData("/api/diagnostics")]
+    [InlineData("/api/diagnostics/bundle")]
+    [InlineData("/api/templates")]
+    [InlineData("/api/sessions")]
+    [InlineData("/api/delivery/authorize")]
+    [InlineData("/api/delivery/sign-out")]
+    public void Everything_else_is_refused(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path), $"{path} must NOT be reachable from the network");
+    }
+
+    /// <summary>
+    /// A prefix match that is too loose is how allowlists leak. <c>/api/sessions</c>
+    /// is the whole archive, so the guest screen gets named files out of it and
+    /// nothing else.
+    ///
+    /// <para>
+    /// This deliberately refused the strip until a tester found the iPad showing
+    /// "All done" over an empty white box. Refusing it was never buying anything:
+    /// <c>qr.png</c> sat allowed beside it, and that QR encodes the link to the
+    /// guest's entire gallery -- strictly more than the one picture being
+    /// guarded. The record stays refused, because that is the part that matters.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void The_session_archive_is_not_opened_up_by_the_qr_rule()
+    {
+        // What the guest screen actually shows once a session is over.
+        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/qr.png"));
+        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg"));
+        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.gif"));
+
+        // The archive listing, the record that carries the token, and the raw
+        // frames -- which the display shows from the watch folder while a session
+        // is live and has no reason to pull out of the archive afterwards.
+        Assert.False(GuestEndpoint.IsGuestPath("/api/sessions"));
+        Assert.False(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/photo-1.jpg"));
+        Assert.False(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/session.json"));
+    }
+
+    /// <summary>
+    /// Likewise the one settings route the display legitimately needs must not
+    /// drag the rest of settings in behind it.
+    /// </summary>
+    [Fact]
+    public void The_backdrop_route_does_not_open_the_rest_of_settings()
+    {
+        Assert.True(GuestEndpoint.IsGuestPath("/api/settings/display-background"));
+
+        Assert.False(GuestEndpoint.IsGuestPath("/api/settings"));
+        Assert.False(GuestEndpoint.IsGuestPath("/api/settings/check-folder"));
+    }
+
+    /// <summary>Case is not a way round it.</summary>
+    [Theory]
+    [InlineData("/OPERATOR")]
+    [InlineData("/Api/Session/Abort")]
+    [InlineData("/API/DIAGNOSTICS/BUNDLE")]
+    public void Casing_does_not_get_past_it(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path));
+    }
+
+    [Fact]
+    public void The_display_page_itself_is_matched_exactly()
+    {
+        Assert.True(GuestEndpoint.IsGuestPath("/display"));
+        Assert.True(GuestEndpoint.IsGuestPath("/DISPLAY"));
+
+        // Not a prefix: /display-something-else is not the guest display.
+        Assert.False(GuestEndpoint.IsGuestPath("/displayed"));
+        Assert.False(GuestEndpoint.IsGuestPath("/display/../operator"));
+    }
+}

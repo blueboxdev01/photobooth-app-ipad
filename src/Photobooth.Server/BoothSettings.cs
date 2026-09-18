@@ -67,6 +67,55 @@ public sealed class BoothSettings
 
     // --- guest display ---
 
+    /// <summary>
+    /// Whether the guest display is served to the network, for an iPad rather
+    /// than a monitor plugged into this machine. Off unless someone turns it on:
+    /// binding to a venue's wifi is a decision, not a default.
+    /// </summary>
+    public bool? GuestDisplayOnNetwork { get; set; }
+
+    /// <summary>
+    /// Serve guests their photos from the booth itself, over its own wifi.
+    ///
+    /// The replacement for a cloud link: no account to be suspended, and it
+    /// works with no internet at all.
+    /// </summary>
+    public bool? GuestGalleryEnabled { get; set; }
+
+    /// <summary>
+    /// The wifi guests join to reach the booth. Only used to build the join code
+    /// on the guest screen -- the booth does not run the network, it just tells
+    /// people how to get onto it.
+    /// </summary>
+    public string? GuestWifiSsid { get; set; }
+
+    /// <summary>
+    /// That network's password, for the same join code. Stored beside the other
+    /// booth settings; it is the guest wifi, not anything of consequence.
+    /// </summary>
+    public string? GuestWifiPassword { get; set; }
+
+    /// <summary>
+    /// Which of this machine's addresses the photos QR advertises.
+    ///
+    /// Null means choose automatically, which is right for a booth with one
+    /// network. It stops being right the moment the laptop is on the guests'
+    /// router and the operator's wifi at once: only one of those is reachable
+    /// from a phone, and picking the wrong one produces a QR that scans and then
+    /// never loads. See <see cref="BoothAddresses"/>.
+    /// </summary>
+    public string? GuestPhotosAddress { get; set; }
+
+    // --- guest display ---
+
+    /// <summary>
+    /// Whether each session also gets a looping GIF of its strip.
+    ///
+    /// On unless someone turns it off. It costs about a second per session,
+    /// which is worth offering back to an operator facing a queue.
+    /// </summary>
+    public bool? AnimationEnabled { get; set; }
+
     /// <summary>Backdrop colour for the guest screen, so a booth can match an event.</summary>
     public string? DisplayBackgroundColor { get; set; }
 

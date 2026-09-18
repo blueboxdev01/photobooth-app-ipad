@@ -32,6 +32,36 @@ interface SettingsResponse {
     backgroundColor: string
     backgroundImage: string | null
   }
+  animation: {
+    /** Whether each session also gets a looping GIF of its strip. */
+    enabled: boolean
+  }
+  guestGallery: {
+    enabled: boolean
+    ssid: string | null
+    hasPassword: boolean
+    /** The address guests are actually being sent to right now. */
+    photosHost: string
+    photosPort: number
+    /** Every address a guest link could carry, best guess first. */
+    addresses: { address: string; adapter: string; kind: string }[]
+    /** The operator's own choice; null means choose automatically. */
+    preferredAddress: string | null
+    /** A saved choice this machine no longer has -- e.g. set at another venue. */
+    preferredMissing: boolean
+  }
+  guestDisplay: {
+    /** What Kestrel is actually serving right now. */
+    running: boolean
+    /** What the saved setting asks for; differs from running until a restart. */
+    wanted: boolean
+    host: string
+    certUrl: string
+    displayUrl: string
+    authorityThumbprint: string
+    authorityExpires: string
+    addresses: string[]
+  }
   delivery: {
     /** A Google OAuth client exists in this build at all. */
     configured: boolean
@@ -198,7 +228,7 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <section className="settings">
-      <h2>Setup</h2>
+      <h2>Settings</h2>
 
       {status && <p className={status.ok ? 'muted' : 'banner'}>{status.text}</p>}
 
@@ -357,6 +387,33 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
           image is drawn over the colour and covers the screen.
         </p>
       </div>
+
+      <div className="settings__group">
+        <h3>Animated GIF</h3>
+
+        <div className="controls">
+          <button className="btn btn--primary" disabled={busy}
+                  onClick={() => void save(
+                    { animationEnabled: !data.animation.enabled },
+                    data.animation.enabled
+                      ? 'Sessions will produce a strip only.'
+                      : 'Sessions will also produce a looping GIF.')}>
+            {data.animation.enabled ? 'Stop making GIFs' : 'Also make a GIF of each strip'}
+          </button>
+        </div>
+
+        <p className="muted small">
+          {data.animation.enabled
+            ? <>A looping copy of the strip, saved as <code>strip.gif</code> beside it,
+                with the photos moving between the frames. Guests get it alongside
+                their photos. It adds about a second to each session &mdash; turn it
+                off if a queue is building.</>
+            : <>Off. Sessions produce the strip and the photos only.</>}
+        </p>
+      </div>
+      <GuestGallery data={data} busy={busy} save={save} />
+
+      <GuestDisplay data={data} busy={busy} save={save} />
 
       <Delivery data={data} busy={busy} setBusy={setBusy} setStatus={setStatus}
                 stuck={stuck} reload={load} save={save} />
@@ -542,6 +599,234 @@ function Delivery({
             ))}
           </ul>
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Serving the guest display to an iPad rather than a monitor.
+ *
+ * The iPad needs HTTPS before Safari will give the page a camera, and the booth
+ * is not a name any public authority will certify -- so it runs its own
+ * authority, and the iPad is told once to trust it.
+ */
+function GuestDisplay({
+  data,
+  busy,
+  save,
+}: {
+  data: SettingsResponse
+  busy: boolean
+  save: (patch: Record<string, unknown>, success: string) => Promise<boolean>
+}) {
+  const g = data.guestDisplay
+  const pendingRestart = g.wanted !== g.running
+
+  return (
+    <div className="settings__group">
+      <h3>Guest display on an iPad</h3>
+
+      {pendingRestart && (
+        <p className="banner">
+          {g.wanted ? 'Switched on' : 'Switched off'} — <strong>restart the booth</strong> to
+          apply it. The network ports are opened once, when the app starts.
+        </p>
+      )}
+
+      <div className="controls">
+        <button className="btn btn--primary" disabled={busy}
+                onClick={() => void save(
+                  { guestDisplayOnNetwork: !g.wanted },
+                  g.wanted ? 'Guest display will stay on this machine.' : 'Guest display will be served to the network.')}>
+          {g.wanted ? 'Stop serving to the network' : 'Serve the display to an iPad'}
+        </button>
+      </div>
+
+      {g.running ? (
+        <>
+          <p className="muted small">
+            Do these <strong>in order</strong>, on the iPad. The second step is the
+            one people miss, and without it the display simply will not load.
+          </p>
+
+          <div className="ipad">
+            <figure className="ipad__step">
+              <img src="/api/guest-display/qr?target=cert" alt="" />
+              <figcaption>
+                <b>1.</b> Scan, install the profile, then turn this booth on under
+                <b> Settings &rsaquo; General &rsaquo; About &rsaquo; Certificate Trust
+                Settings</b>.
+              </figcaption>
+            </figure>
+
+            <figure className="ipad__step">
+              <img src="/api/guest-display/qr?target=display" alt="" />
+              <figcaption>
+                <b>2.</b> Scan to open the display.
+                <br /><code>{g.displayUrl}</code>
+              </figcaption>
+            </figure>
+          </div>
+
+          <dl className="facts">
+            <dt>Certificate page</dt>
+            <dd><code>{g.certUrl}</code></dd>
+            <dt>Booth authority</dt>
+            <dd>
+              <code>{g.authorityThumbprint}</code>
+              <br />
+              <span className="muted small">
+                Install once per iPad. If this fingerprint ever changes, every iPad
+                has to trust the booth again.
+              </span>
+            </dd>
+            <dt>This machine</dt>
+            <dd>{g.addresses.join(', ')}</dd>
+          </dl>
+
+          <p className="muted small">
+            Only the guest display is served to the network — this page, the
+            templates and every session control stay on this machine. If the iPad
+            cannot reach the booth at all, the network is most likely separating
+            its devices; use your own router or the laptop&rsquo;s hotspot rather
+            than a venue&rsquo;s wifi.
+          </p>
+        </>
+      ) : (
+        <p className="muted small">
+          Off. The guest display is served only to this machine, for a monitor
+          plugged into it. Switch it on to use an iPad instead — the booth will
+          issue its own certificate so Safari will give the page its camera.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Guests taking their photos from the booth itself.
+ *
+ * The replacement for a cloud link: nothing to sign into, nothing to be
+ * suspended, and it works with no internet. The cost is that guests have to join
+ * a network, which is the step worth making as easy as scanning a code.
+ */
+function GuestGallery({
+  data,
+  busy,
+  save,
+}: {
+  data: SettingsResponse
+  busy: boolean
+  save: (patch: Record<string, unknown>, success: string) => Promise<boolean>
+}) {
+  const g = data.guestGallery
+  const [ssid, setSsid] = useState(g.ssid ?? '')
+  const [password, setPassword] = useState('')
+
+  return (
+    <div className="settings__group">
+      <h3>Guest photos over your wifi</h3>
+
+      <div className="controls">
+        <button className="btn btn--primary" disabled={busy}
+                onClick={() => void save(
+                  { guestGalleryEnabled: !g.enabled },
+                  g.enabled ? 'Guests will be handed photos by hand.' : 'Guests can take their own photos.')}>
+          {g.enabled ? 'Stop serving photos to guests' : 'Let guests download their photos'}
+        </button>
+      </div>
+
+      {g.enabled ? (
+        <>
+          <p className="muted small">
+            At the end of a session the guest screen shows two codes: one to join
+            your wifi, one to open their own photos. Fill in the network so the
+            first code works &mdash; it is your router, not the booth&rsquo;s.
+          </p>
+
+          <div className="fields">
+            <label>Wifi network
+              <input className="control" value={ssid} spellCheck={false}
+                     placeholder="Photobooth"
+                     onChange={(e) => setSsid(e.target.value)} />
+            </label>
+            <label>Wifi password
+              <input className="control" type="password" value={password}
+                     spellCheck={false}
+                     placeholder={g.hasPassword ? '••••••••' : 'none'}
+                     onChange={(e) => setPassword(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="controls">
+            <button className="btn" disabled={busy}
+                    onClick={() => void save(
+                      { guestWifiSsid: ssid.trim(), guestWifiPassword: password },
+                      'Wifi details saved.')}>
+              Save wifi details
+            </button>
+          </div>
+
+          {g.preferredMissing && (
+            <p className="banner">
+              This booth no longer has the address you picked
+              (<code>{g.preferredAddress}</code>) &mdash; it was probably saved on a
+              different network. Guests are being sent to{' '}
+              <code>{g.photosHost}</code> instead. Pick again below.
+            </p>
+          )}
+
+          <div className="fields">
+            <label>Guests reach the booth at
+              <select className="control" value={g.preferredAddress ?? ''}
+                      disabled={busy}
+                      onChange={(e) => void save(
+                        { guestPhotosAddress: e.target.value },
+                        e.target.value === ''
+                          ? 'The booth will choose its own address.'
+                          : `Guests will be sent to ${e.target.value}.`)}>
+                <option value="">Choose automatically</option>
+                {g.addresses.map((a) => (
+                  <option key={a.address} value={a.address}>
+                    {a.adapter} &mdash; {a.address}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {g.addresses.length === 0 ? (
+            <p className="banner">
+              This booth has no network address, so there is nowhere to send
+              guests. Connect it to the wifi or router the guests will be on.
+            </p>
+          ) : g.addresses.length > 1 && g.preferredAddress === null ? (
+            <p className="banner">
+              This booth is on <strong>{g.addresses.length} networks</strong> and is
+              guessing. Only one of them is the guests&rsquo; &mdash; pick it above,
+              or the code will scan and then never load.
+            </p>
+          ) : null}
+
+          <dl className="facts">
+            <dt>Guests reach</dt>
+            <dd><code>http://{g.photosHost}:{g.photosPort}/g/&hellip;</code></dd>
+          </dl>
+
+          <p className="muted small">
+            Each link opens one session and nothing else, so a guest can only ever
+            see their own photos. <strong>The link stops working once they leave
+            your wifi</strong> &mdash; it is for taking photos away there and then,
+            not for coming back to next week.
+          </p>
+        </>
+      ) : (
+        <p className="muted small">
+          Off. Guests are told to ask for their photos, and you hand them over from
+          the output folder. Switch this on to let them scan a code and download
+          their own.
+        </p>
       )}
     </div>
   )

@@ -46,7 +46,15 @@ public sealed record SessionRecord(
     /// photos so a guest who lost their link can be shown the code again days
     /// later, without the booth having to be running.
     /// </summary>
-    string? Qr = null);
+    string? Qr = null,
+    /// <summary>
+    /// The looping GIF of the strip, if one was made. Null for every session
+    /// archived before the feature existed, and for any session where building
+    /// it failed -- which is why it is nullable and last in this list. A
+    /// required parameter here would stop every existing session.json on disk
+    /// from deserialising.
+    /// </summary>
+    string? Animation = null);
 
 /// <summary>
 /// Writes each session to its own folder on disk.
@@ -72,6 +80,37 @@ public sealed class SessionArchive(
     };
 
     private readonly ArchiveOptions _options = options.Value;
+
+    /// <summary>
+    /// What each session.json held, and what the file looked like when we read it.
+    ///
+    /// <para>
+    /// Both screens poll delivery every few seconds, the guest gallery resolves a
+    /// token on every request, and all of it goes through <see cref="All"/> -- which
+    /// opened and parsed every session.json on disk, every time. That is fixed work
+    /// per session, so it grows all evening: measured at 5ms over 8 sessions and
+    /// 35ms over 200. By the end of a long night the booth is re-reading hours of
+    /// finished sessions to answer "is this one delivered yet".
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Revalidated, not trusted.</b> The entry is reused only while the file's
+    /// write time and length both still match. This is not caution for its own
+    /// sake: the archive is deliberately a pile of text files precisely so a stuck
+    /// session can be unstuck by editing one by hand, and the runbook tells the
+    /// operator to do exactly that. A cache that held on to what it read first
+    /// would quietly make that advice wrong.
+    /// </para>
+    /// <para>
+    /// A record already read is also what answers while a writer is replacing
+    /// the file, so a delivery poll landing in that gap no longer loses the
+    /// session -- which is stronger than the uncached version managed.
+    /// </para>
+    /// </summary>
+    private readonly Dictionary<string, Cached> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lock _cacheLock = new();
+
+    private readonly record struct Cached(DateTime WrittenUtc, long Length, SessionRecord Record);
 
     public string Root => Path.GetFullPath(_options.Folder);
 
@@ -103,7 +142,8 @@ public sealed class SessionArchive(
         StripTemplate template,
         IReadOnlyList<CapturedPhoto> captures,
         string stripSource,
-        DateTimeOffset createdUtc)
+        DateTimeOffset createdUtc,
+        string? animationSource = null)
     {
         var folderName = FolderName(createdUtc, token);
         var folder = Path.Combine(Root, folderName);
@@ -136,15 +176,24 @@ public sealed class SessionArchive(
         const string stripName = "strip.jpg";
         File.Copy(stripSource, Path.Combine(folder, stripName), overwrite: true);
 
+        // Named to pair with the strip it is a moving copy of.
+        string? animationName = null;
+        if (animationSource is not null && File.Exists(animationSource))
+        {
+            animationName = "strip.gif";
+            File.Copy(animationSource, Path.Combine(folder, animationName), overwrite: true);
+        }
+
         var record = new SessionRecord(
             token, folderName, createdUtc, template.Name, template.ShotCount,
-            stripName, photoNames, sourceNames);
+            stripName, photoNames, sourceNames, Animation: animationName);
 
         WriteRecord(folder, record);
 
         logger.LogInformation(
-            "Archived session {Folder}: {Count} photos plus the strip.",
-            folderName, photoNames.Count);
+            "Archived session {Folder}: {Count} photos, the strip{Animation}.",
+            folderName, photoNames.Count,
+            animationName is null ? string.Empty : " and the animation");
 
         return record;
     }
@@ -176,6 +225,17 @@ public sealed class SessionArchive(
             try
             {
                 File.Move(staging, path, overwrite: true);
+
+                // Dropped rather than replaced: the next read takes the file's own
+                // write time with it. Explicit here because we are the writer and
+                // need not wait for a clock to disagree -- the revalidation in All()
+                // is for edits made outside this process.
+                lock (_cacheLock)
+                {
+                    _cache.Remove(Path.GetFileName(
+                        folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+                }
+
                 return;
             }
             catch (Exception ex) when (
@@ -213,30 +273,117 @@ public sealed class SessionArchive(
         }
 
         var records = new List<SessionRecord>();
-        foreach (var folder in Directory.EnumerateDirectories(Root))
-        {
-            var path = Path.Combine(folder, "session.json");
-            if (!File.Exists(path))
-            {
-                continue;
-            }
 
-            try
+        lock (_cacheLock)
+        {
+            var present = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var folder in Directory.EnumerateDirectories(Root))
             {
-                var record = JsonSerializer.Deserialize<SessionRecord>(
-                    ReadShared(path), Json);
-                if (record is not null)
+                var name = Path.GetFileName(folder);
+                var path = Path.Combine(folder, "session.json");
+                var before = new FileInfo(path);
+
+                // May be default, whose Record is null -- that is the "never read
+                // this one" case, and it is checked for rather than assumed away.
+                _cache.TryGetValue(name, out var cached);
+
+                if (!before.Exists)
                 {
+                    // The folder is here but the record is not, which is what a
+                    // replace in flight looks like from the outside. A session we
+                    // have read before is not lost because we looked in the gap.
+                    if (cached.Record is not null)
+                    {
+                        present.Add(name);
+                        records.Add(cached.Record);
+                    }
+
+                    continue;
+                }
+
+                present.Add(name);
+
+                // Length as well as write time, because a timestamp alone is only
+                // as fine-grained as the filesystem: FAT32, which is what a USB
+                // stick used as an output folder is likely to be, rounds to two
+                // seconds -- and the upload queue can rewrite a record twice
+                // inside that.
+                if (cached.Record is not null
+                    && cached.WrittenUtc == before.LastWriteTimeUtc
+                    && cached.Length == before.Length)
+                {
+                    records.Add(cached.Record);
+                    continue;
+                }
+
+                try
+                {
+                    var record = JsonSerializer.Deserialize<SessionRecord>(
+                        ReadShared(path), Json)
+                        ?? throw new JsonException($"{path} contained null.");
+
+                    // Stat again, and keep the entry only if the file did not move
+                    // underneath the read. Otherwise the stat taken before it and
+                    // the content taken after it describe different versions, and
+                    // the cache would answer a later matching stat with the wrong
+                    // record. Unremembered here just means read again next time.
+                    var after = new FileInfo(path);
+                    if (after.Exists
+                        && after.LastWriteTimeUtc == before.LastWriteTimeUtc
+                        && after.Length == before.Length)
+                    {
+                        _cache[name] = new Cached(before.LastWriteTimeUtc, before.Length, record);
+                    }
+
                     records.Add(record);
                 }
+                catch (Exception ex)
+                {
+                    if (cached.Record is not null)
+                    {
+                        // Almost certainly the writer mid-replace. The copy we
+                        // already have is a better answer than dropping the session
+                        // out of the list -- a delivery poll that loses a session
+                        // reports it as gone, and the screens act on that.
+                        records.Add(cached.Record);
+                    }
+                    else
+                    {
+                        logger.LogWarning(ex, "Could not read {Path}.", path);
+                    }
+                }
             }
-            catch (Exception ex)
+
+            // A session whose folder is gone stops being remembered -- otherwise the
+            // booth would hold every session of the evening in memory, and go on
+            // serving photos the operator had deleted on purpose.
+            foreach (var gone in _cache.Keys.Where(k => !present.Contains(k)).ToList())
             {
-                logger.LogWarning(ex, "Could not read {Path}.", path);
+                _cache.Remove(gone);
             }
         }
 
         return [.. records.OrderByDescending(r => r.CreatedUtc)];
+    }
+
+    /// <summary>
+    /// The session a guest's link refers to, or null.
+    ///
+    /// The token is the only credential a guest has, so the comparison is
+    /// ordinal and exact -- and a caller that gets null must not be told whether
+    /// the token was wrong or the session merely gone, since either answer helps
+    /// someone guessing. Deliberately not matched against the folder name, which
+    /// is a date and a time and guessable.
+    /// </summary>
+    public SessionRecord? ByToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        return All().FirstOrDefault(r => string.Equals(r.Token, token, StringComparison.Ordinal));
     }
 
     public long? FreeDiskBytes()

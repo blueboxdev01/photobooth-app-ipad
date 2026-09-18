@@ -24,7 +24,6 @@ it.
 | Power | **DR-E18 / LP-E17 dummy battery.** The R50 will not power itself over USB-C while tethered, and a real battery dies in under an hour |
 | Cable | Short, good USB-C. The R50 is USB 2.0 despite the connector |
 | Trigger | **BR-E1** Bluetooth remote (or a JJC clone) |
-| Second camera | Any **webcam** — this is the guest-facing posing mirror, and is *not* used to take photos |
 
 ## Setting up
 
@@ -32,19 +31,18 @@ it.
    .NET, no Node. Windows SmartScreen may warn about an unsigned binary; choose
    *More info → Run anyway*.
 2. Open <http://localhost:5000/operator>. Everything else is reachable from the
-   left-hand rail: **Session**, **Templates** and **Setup**. The rail also has a
+   left-hand rail: **Start Session**, **Guest Gallery**, **Templates**, and **Settings** at the foot. The rail also has a
    light/dark switch at the bottom -- a booth is set up in daylight and run in a
    dark room, so use whichever is easier on your eyes.
 3. On the camera: `Settings → USB Connection App → Photo Import/Remote Control`.
    Set manual exposure, **manual white balance** (not AWB), fixed ISO,
    **JPEG only** (not RAW), auto power-off disabled.
 4. Start EOS Utility and choose remote shooting. Note the folder it saves to.
-5. Go to **Setup** and paste that folder into **Watch folder**, press **Check**,
+5. Go to **Settings** and paste that folder into **Watch folder**, press **Check**,
    then **Save watch folder**. It takes effect immediately.
 6. Set an **Output folder** too -- somewhere findable such as
    `C:\Users\you\Pictures\PhotoboothSessions`. Finished sessions are filed there,
    one folder per guest. It must be a different folder from the watch one.
-7. Still on **Setup**, pick your webcam under **Cameras -> Preview**.
 
 > You no longer need to make EOS Utility save anywhere in particular — point the
 > app at wherever it already saves.
@@ -86,9 +84,9 @@ names under **Watch folder**.
 ## Test 3 — How long from pressing the remote to the file appearing?
 
 We guessed and set a 20-second timeout. Only you can measure the real number.
-Once you have it, set the timeout under **Setup -> Timings**.
+Once you have it, set the timeout under **Settings -> Timings**.
 
-1. On **Setup**, hit **Mark shutter press** at the same moment you press the
+1. On **Settings**, hit **Mark shutter press** at the same moment you press the
    remote.
 2. Repeat about five times.
 3. Read off the average and worst figures.
@@ -136,7 +134,7 @@ Accept a session and look at the composited 2×6 strip.
       the raw photos and a `session.json` beside it
 - [ ] The originals are **still** in the watch folder, untouched
 
-If the layout is wrong you can fix it yourself. **Setup -> Strip layout** sets
+If the layout is wrong you can fix it yourself. **Settings -> Strip layout** sets
 how many photos and the output size (portrait strip or landscape), placing the
 slots evenly. **Templates** lets you drag individual slots, type exact sizes, and
 re-render. Tell us what you changed.
@@ -172,31 +170,22 @@ Notes: __________________________________________________
 ## Test 8 — Framing and crop *(shapes the strip design)*
 
 The strip's photo slots are **4:3**, but the R50 shoots **3:2**, so the sides get
-cropped. The dashed yellow box on the guest screen marks what survives — but it
-is **not calibrated** against your camera yet, since the webcam sits beside the
-lens rather than on its axis.
+cropped. There is no longer a guide box on the guest screen to warn anyone: the
+framing has to be judged through the camera, which is the only thing that knows
+what it is actually taking.
 
-1. Stand where a guest would.
-2. Compare what the guide box promises against the actual photo.
+1. Stand where a guest would, at normal booth distance.
+2. Take a strip, and compare the photos on it against what you framed.
 
-- Is the guide roughly right, or does it need moving? ______________
 - Do people lose their shoulders at normal booth distance? ______________
+- Does the booth need marking on the floor to stop guests crowding in? ______
 - Would you rather the slots were 3:2 and the strip had a bigger footer? ______
-
----
-
-## Test 9 — Both cameras at once
-
-- [ ] Webcam preview runs while the R50 is tethered and shooting
-- [ ] Picking a different webcam on **Setup** changes the mirror
-- [ ] The preview is mirrored (raise your right hand; it should appear on the
-      right side of the screen, like a mirror)
 
 ---
 
 ## Sending results back
 
-On **Setup**, click **Download diagnostics bundle** and send the ZIP along with
+On **Settings**, click **Download diagnostics bundle** and send the ZIP along with
 this filled-in sheet.
 
 It contains the logs, every ingest decision with its reason, the settings the
