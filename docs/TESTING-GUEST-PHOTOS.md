@@ -24,7 +24,7 @@ No router needed. About ten minutes.
 dotnet test
 ```
 
-**Expect:** 284 passed, 0 failed. If anything fails, stop here — the rest of
+**Expect:** 345 passed, 0 failed. If anything fails, stop here — the rest of
 this plan assumes the build is sound.
 
 ### A2. Settings shows every address, named by adapter
@@ -134,14 +134,22 @@ The laptop is now on two networks, which is exactly the case that used to break.
 
 ### B5. A guest gets their photos
 
+A photo opening instead of downloading is the intended behaviour, not a fault.
+A download on iOS lands in Files, which is not where anyone looks for a photo;
+the long press is what reaches the camera roll. The one-tap share sheet needs a
+secure context, and this page is plain HTTP so the iPad can fetch the
+certificate over it.
+
 Run a session with the mock camera through to the end, then from the phone:
 
 | Step | Expect |
 |---|---|
 | Scan the **join** code | The phone offers to join the network, without typing a password |
 | Scan the **photos** code | The page loads and shows *that session's* photos |
-| Tap one photo | It downloads and opens in the camera roll |
-| Tap **Download all as a zip** | A zip downloads, opens, and holds the strip plus every photo |
+| Tap one photo | It opens full screen &mdash; it does **not** download |
+| Touch and hold that photo | iOS offers **Add to Photos**, Android **Download image** |
+| Use it, then open Photos | The picture is in the camera roll, named after the session |
+| Tap **Or download everything as one file** | A zip downloads and holds the strip, the GIF and every photo |
 | Look for `session.json` | It is **not** in the zip and **not** on the page |
 
 ### B6. A guest cannot reach anything else
