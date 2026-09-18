@@ -38,7 +38,20 @@ public sealed record SessionSnapshot(
     string? StripUrl = null,
     string? SessionFolder = null,
     int? RetakingSlot = null,
-    string? Token = null)
+    string? Token = null,
+    /// <summary>
+    /// What the booth’s clock said when this was built.
+    ///
+    /// <para>
+    /// Here because a countdown must not be computed against the screen’s own
+    /// clock. The operator console runs on the booth, so its clock agrees by
+    /// definition; the guest display runs on an iPad whose clock is its own
+    /// business, and one that is three seconds out showed the operator three
+    /// seconds and the guest six. Both screens work out how far their clock is
+    /// from this and count the same seconds regardless.
+    /// </para>
+    /// </summary>
+    DateTimeOffset? ServerNowUtc = null)
 {
     public int CapturedCount => Photos.Count;
 
