@@ -60,7 +60,7 @@ If this works, everything else on this list is refinement.
 
 ## Section 1 — Setup
 
-**Setup → Folders**
+**Settings → Folders**
 
 - [ ] Watch folder matches EOS Utility's save location **exactly**
 - [ ] Press **Check** — reports usable, not just "exists"
@@ -68,18 +68,18 @@ If this works, everything else on this list is refinement.
 - [ ] The two folders are **different**
 - [ ] Free disk space is at least 2 GB, ideally 10× your expected sessions × 30 MB
 
-**Setup → Strip layout**
+**Settings → Strip layout**
 
 - [ ] Output size chosen, and it is the size you are actually delivering
 - [ ] Photos per strip set; min and max bound what the event allows
 - [ ] Slots look evenly placed in **Templates**
 
-**Setup → Timings**
+**Settings → Timings**
 
 - [ ] Countdown set to what suits your guests (default 3s)
 - [ ] No-photo timeout longer than the real press-to-file latency you measured in 0.1
 
-**Setup → Guest display**
+**Settings → Guest display**
 
 - [ ] Backdrop colour or image set for the event
 
@@ -100,7 +100,7 @@ put a wrong photo on a strip.
 | Drop a huge file in slowly | Waits for it to finish, never reads a half-written file | ☐ |
 | Fill the watch folder with 200 old files, start a session | Only new ones count | ☐ |
 
-- [ ] **Setup → Ingest decisions** names a reason for every rejection
+- [ ] **Settings → Ingest decisions** names a reason for every rejection
 
 ---
 
@@ -200,7 +200,7 @@ measured against the R50's. Verify it honestly:
 
 ## Section 8b — The iPad as the guest display
 
-Skip if you are using a monitor. Setup is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**.
+Skip if you are using a monitor. Settings is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**.
 
 - [ ] Certificate installed **and trusted** under Certificate Trust Settings
 - [ ] Display opens with a **padlock**, and the **mirror appears**
@@ -232,7 +232,7 @@ Skip if you are using a monitor. Setup is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**
 
 ## Section 8c — Guests downloading their own photos
 
-Skip if you are handing photos over by hand. Setup is
+Skip if you are handing photos over by hand. Settings is
 **[GUEST-PHOTOS.md](GUEST-PHOTOS.md)**.
 
 From **your own phone**, on the booth's wifi:
@@ -262,7 +262,7 @@ From **your own phone**, on the booth's wifi:
 
 Skip if you are running without Google Drive.
 
-**Setup → Guest delivery**
+**Settings → Guest delivery**
 
 - [ ] Account shown is the **booth** account, not a personal one
 - [ ] Consent screen is **In production**, not Testing — otherwise the sign-in dies after 7 days, mid-event
@@ -307,7 +307,7 @@ The one that finds what single sessions never do.
 - [ ] Drive folders are "anyone with the link" — a forwarded link works for whoever holds it
 - [ ] No guest names in folder names
 - [ ] You have a retention period in mind, covering the laptop, Drive, and any backup
-- [ ] **Setup → Download diagnostics bundle** — confirm it contains **no photographs** and no credentials
+- [ ] **Settings → Download diagnostics bundle** — confirm it contains **no photographs** and no credentials
 
 ---
 

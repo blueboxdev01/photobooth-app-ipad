@@ -225,9 +225,9 @@ A(ticks([
     "<b>Start the booth after the cable is in.</b> The HTTPS certificate only "
     "covers addresses the laptop had at startup &mdash; joining a network "
     "afterwards means the iPad will refuse to connect.",
-    "<b>Setup &rsaquo; Guests reach the booth at</b> &mdash; pick the "
+    "<b>Settings &rsaquo; Guests reach the booth at</b> &mdash; pick the "
     "<b>Ethernet</b> address, the one on the router's range.",
-    "<b>Setup &rsaquo; wifi network and password</b> match the router exactly, "
+    "<b>Settings &rsaquo; wifi network and password</b> match the router exactly, "
     "including capitals.",
     "Output folder set, and <b>/diagnostics</b> shows plenty of free disk. "
     "Budget about <b>25 MB per session</b>.",
@@ -250,7 +250,7 @@ E(heading("Power"))
 A(fixes([
     ("Router has no lights",
      "Check the socket and both ends of the barrel plug; try another socket. "
-     "<b>If it is dead:</b> switch to the laptop's Mobile Hotspot, then in Setup "
+     "<b>If it is dead:</b> switch to the laptop's Mobile Hotspot, then in Settings "
      "pick the <b>192.168.137</b> address. Restart the booth afterwards. Expect "
      "a limit of <b>8 phones at once</b> and no way to disconnect anyone."),
     ("Laptop switched to battery",
@@ -280,7 +280,7 @@ A(fixes([
      "Utility has closed. Wake the camera and check EOS Utility is still in "
      "remote shooting mode. Press <b>Abort</b> and start the guest again."),
     ("Photos are not being picked up",
-     "The watch folder is wrong. <b>Setup &rsaquo; Watch folder</b> must be "
+     "The watch folder is wrong. <b>Settings &rsaquo; Watch folder</b> must be "
      "where EOS Utility actually saves. <b>/diagnostics</b> lists the files it "
      "can see &mdash; if that list is empty, the folder is wrong."),
     ("Photos appear but are ignored",
@@ -321,18 +321,18 @@ E(heading("Guest photo delivery",
           "The most likely thing to fail, and the least serious. See the rule on page 1."))
 A(fixes([
     ("Guests cannot find the wifi network",
-     "The name in Setup is <b>only text for the QR code</b> &mdash; it does not "
+     "The name in Settings is <b>only text for the QR code</b> &mdash; it does not "
      "create anything. Check the router is broadcasting that exact name, "
      "capitals included."),
     ("Phone joins, but the photos page never loads",
-     "<b>First:</b> Setup &rsaquo; <i>Guests reach the booth at</i> &mdash; is "
+     "<b>First:</b> Settings &rsaquo; <i>Guests reach the booth at</i> &mdash; is "
      "it the router's address? <b>Second:</b> the router's guest-network or "
      "client-isolation setting must be <b>off</b>. Those two cover almost every "
      "case."),
-    ("Setup warns it is &quot;guessing&quot;",
+    ("Settings warns it is &quot;guessing&quot;",
      "The laptop is on more than one network. Pick the address on the guests' "
      "network. Takes effect immediately, no restart."),
-    ("Setup names an address it cannot find",
+    ("Settings names an address it cannot find",
      "Saved at a different venue. Pick again from the list."),
     ("&quot;We cannot find those photos&quot;",
      "The link is mistyped, or that session's folder has been deleted or moved "
@@ -453,7 +453,7 @@ E(heading("Fill this in before doors open",
 A(blanks([
     "Wifi network name",
     "Wifi password",
-    "Booth address (from Setup)",
+    "Booth address (from Settings)",
     "Output folder",
     "App version",
     "Who to call",

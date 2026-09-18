@@ -27,7 +27,7 @@ dotnet test
 **Expect:** 284 passed, 0 failed. If anything fails, stop here — the rest of
 this plan assumes the build is sound.
 
-### A2. Setup shows every address, named by adapter
+### A2. Settings shows every address, named by adapter
 
 1. Start the booth and open **Setup**.
 2. Turn on **Guest photos over your wifi** if it is off.

@@ -22,7 +22,7 @@ people give up on halfway.
 
 The GIF is the same strip with the photos rotating through its slots. It is
 about 160 KB, so it downloads as quickly as a single photo, and it can be
-turned off in **Setup > Animated GIF** if a queue is building.
+turned off in **Settings > Animated GIF** if a queue is building.
 
 ---
 
@@ -90,7 +90,7 @@ your guests need to reach.
 
 ### 2. Turn it on
 
-**Setup → Guest photos over your wifi → Let guests download their photos.**
+**Settings → Guest photos over your wifi → Let guests download their photos.**
 
 Fill in the **wifi network** and **password** — your router's, not the booth's.
 
@@ -102,7 +102,7 @@ Fill in the **wifi network** and **password** — your router's, not the booth's
 
 ### 3. Tell the booth which address to advertise
 
-**Setup → Guest photos over your wifi → Guests reach the booth at.**
+**Settings → Guest photos over your wifi → Guests reach the booth at.**
 
 A booth laptop is routinely on more than one network — the guests' router and
 your own wifi — and **only one of those addresses is reachable from a guest's
@@ -112,11 +112,11 @@ Pick the one on the guests' network. The list shows the adapter beside each
 address (`Ethernet — 192.168.8.100`), which is what makes them tellable apart.
 
 Leaving it on **Choose automatically** is fine when the booth is on a single
-network, and Setup says so plainly when it is not: *"This booth is on 2 networks
+network, and Settings says so plainly when it is not: *"This booth is on 2 networks
 and is guessing."* Do not leave it guessing at an event.
 
 If a saved choice is no longer one of this machine's addresses — you set it at
-the last venue — Setup says that too, and falls back rather than advertising an
+the last venue — Settings says that too, and falls back rather than advertising an
 address that cannot answer.
 
 ### 4. Check it
@@ -172,7 +172,7 @@ will quietly lose the page and assume the booth is broken.
 
 | What you see | What it means |
 |---|---|
-| **Scanning the join code does nothing at all** | Almost always the network in Setup is not one that is actually broadcasting -- a placeholder, a typo, or a router that is off. A phone given a code for a network it cannot see has nothing to join and usually says nothing. Check the name matches the network in your phone's own wifi list, exactly, including case |
+| **Scanning the join code does nothing at all** | Almost always the network in Settings is not one that is actually broadcasting -- a placeholder, a typo, or a router that is off. A phone given a code for a network it cannot see has nothing to join and usually says nothing. Check the name matches the network in your phone's own wifi list, exactly, including case |
 | The phone offers to join but fails | The password is wrong. Try joining by hand to check it |
 | **Joined, but the photos page never loads** | Two causes, in this order. **One:** the booth is advertising the wrong address -- check that *Guests reach the booth at* names the guests' network. **Two:** the network is separating its devices; turn off the router's guest mode and client isolation |
 | The page loaded once and then stopped | An Android phone has switched itself back to mobile data. Rejoin the wifi and tell it to stay |

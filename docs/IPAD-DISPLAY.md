@@ -36,7 +36,7 @@ it. That is the whole of what the steps below do.
 
 ## 1. Switch it on
 
-On the booth laptop, open **Setup → Guest display on an iPad** and press
+On the booth laptop, open **Settings → Guest display on an iPad** and press
 **Serve the display to an iPad**.
 
 Then **restart the booth**. The app opens its network ports once, when it starts,
@@ -55,7 +55,7 @@ Two things happen on that first start:
 
 ## 2. Trust the booth on the iPad
 
-Back on **Setup → Guest display on an iPad**, you will see **two QR codes**.
+Back on **Settings → Guest display on an iPad**, you will see **two QR codes**.
 
 ### Scan the first one
 
@@ -148,7 +148,7 @@ dismissed it, allow `Photobooth.Server` under Windows Defender Firewall.
 
 **The `.local` name will not resolve.** The URLs use your machine's mDNS name,
 which is what survives a change of address. If it does not resolve, use the IP
-shown under **This machine** on the Setup page — the certificate covers both.
+shown under **This machine** on the Settings page — the certificate covers both.
 
 **Safari says the connection is not private.** The certificate is installed but
 not trusted. Go back to *Certificate Trust Settings* and switch the booth on.
@@ -195,5 +195,5 @@ The fallback costs nothing: plug in a monitor and open
 | New IP, new venue, new router | **Nothing.** A new certificate is issued at startup and the iPad already trusts the authority that signed it |
 | Booth restarted | Nothing |
 | A second iPad | Steps 2 and 3 on that iPad |
-| New laptop | New authority, so every iPad repeats step 2. The fingerprint on the Setup page will have changed |
+| New laptop | New authority, so every iPad repeats step 2. The fingerprint on the Settings page will have changed |
 | `data/` deleted | Same as a new laptop |
