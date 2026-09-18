@@ -102,7 +102,7 @@ public sealed class GuestGalleryTests : IDisposable
     }
 
     [Fact]
-    public async Task A_photo_downloads_with_a_name_worth_keeping()
+    public async Task A_photo_opens_for_saving_with_a_name_worth_keeping()
     {
         var record = Save("tokenAAA", DateTimeOffset.UtcNow);
 
@@ -111,9 +111,19 @@ public sealed class GuestGalleryTests : IDisposable
 
         Assert.Equal(200, context.Response.StatusCode);
 
-        // "photo-1.jpg" from three booths collides in a camera roll.
         var disposition = context.Response.Headers.ContentDisposition.ToString();
-        Assert.Contains("attachment", disposition);
+
+        // inline, not attachment, and that is the point rather than an accident.
+        // A download on iOS goes to Files; Photos is where a guest expects their
+        // photos. Served inline, the picture opens and a long press offers "Add
+        // to Photos". The share sheet would be one tap instead, but it needs a
+        // secure context and this page is plain HTTP so the iPad can fetch the
+        // certificate over it.
+        Assert.Contains("inline", disposition);
+        Assert.DoesNotContain("attachment", disposition);
+
+        // The name still has to survive the save: "photo-1.jpg" from three
+        // different booths collides in one camera roll.
         Assert.Contains(record.FolderName, disposition);
     }
 

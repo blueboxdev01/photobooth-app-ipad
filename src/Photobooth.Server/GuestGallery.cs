@@ -111,10 +111,22 @@ public static class GuestGallery
             _ => "image/jpeg",
         };
 
-        // attachment, so a phone saves it rather than showing it in a tab the
-        // guest then has to long-press.
+        // inline, deliberately, and this was the other way round.
+        //
+        // "attachment" makes a phone download the file, and on iOS a download
+        // goes to Files -- not Photos, which is where a guest expects their
+        // photos and where they can post them from. There is no web API that
+        // can write to the camera roll: the share sheet needs a secure context
+        // and this page is plain HTTP, because the iPad has to be able to fetch
+        // the certificate over it before it trusts anything.
+        //
+        // So the picture is served to be looked at. The guest taps it, it fills
+        // the screen, and a long press offers "Add to Photos" on iOS and
+        // "Download image" on Android -- both of which land in the gallery. The
+        // filename is still declared, so whichever they use keeps a name worth
+        // having.
         context.Response.Headers.ContentDisposition =
-            $"attachment; filename=\"{Download(record, allowed)}\"";
+            $"inline; filename=\"{Download(record, allowed)}\"";
 
         await context.Response.SendFileAsync(full);
     }
@@ -248,7 +260,7 @@ public static class GuestGallery
             var wide = isStrip || isAnimation ? " tile--strip" : string.Empty;
 
             return $"""
-                      <a class="tile{wide}" href="{href}" download>
+                      <a class="tile{wide}" href="{href}">
                         <img src="{href}" alt="">
                         <span>{WebUtility.HtmlEncode(label)}</span>
                       </a>
@@ -278,29 +290,37 @@ public static class GuestGallery
               .tile--strip img { max-height: 60vh; width: auto; margin: 0 auto; }
               .tile span { display: block; padding: 9px 12px; font-size: 13.5px;
                            font-weight: 600; }
-              .all { display: block; margin: 22px 0 0; padding: 15px;
-                     background: #2563eb; color: #fff; text-align: center;
-                     border-radius: 12px; text-decoration: none; font-weight: 700; }
+              .how { margin: 0 0 18px; padding: 12px 14px; font-size: 14.5px;
+                     line-height: 1.5; background: #eef4ff; border-radius: 10px; }
+              .all { display: block; margin: 22px 0 0; padding: 13px;
+                     background: #eef0f3; color: #3c4450; text-align: center;
+                     border-radius: 12px; text-decoration: none; font-weight: 600;
+                     font-size: 14px; }
               .hint { color: #6b7280; font-size: 13.5px; margin-top: 18px; }
               @media (prefers-color-scheme: dark) {
                 body { background: #14161a; color: #e8eaed; }
                 .tile { background: #1c1f24; border-color: #2b2f36; }
                 .when, .hint { color: #9aa1ab; }
+                .how { background: #18202c; }
+                .all { background: #1c1f24; color: #c7cdd6; }
               }
             </style>
 
             <h1>Your photos</h1>
             <p class="when">Taken {{taken}}</p>
 
-            <a class="all" href="{{Prefix}}{{token}}/all.zip" download>Download all as a zip</a>
+            <p class="how"><b>Tap a photo</b>, then <b>touch and hold it</b> and choose
+               <b>Add to Photos</b> &mdash; or <b>Download image</b> on Android. That
+               puts it straight in your camera roll.</p>
 
             <div class="grid">
             {{tiles}}
             </div>
 
-            <p class="hint">Tap a photo to save it on its own. This page works only
-               while you are on the booth&rsquo;s wifi &mdash; save what you want
-               before you leave.</p>
+            <a class="all" href="{{Prefix}}{{token}}/all.zip" download>Or download everything as one file</a>
+
+            <p class="hint">This page works only while you are on the booth&rsquo;s
+               wifi &mdash; save what you want before you leave.</p>
             """);
     }
 }
