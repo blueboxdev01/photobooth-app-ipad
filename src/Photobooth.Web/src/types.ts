@@ -30,6 +30,8 @@ export interface SessionSnapshot {
   isReordered: boolean
   /** Absolute instants, so the browser ticks the countdown locally. */
   countdownEndsUtc: string | null
+  /** What the booth’s clock said when this snapshot was built. */
+  serverNowUtc: string | null
   timeoutAtUtc: string | null
   startedUtc: string | null
   message: string | null
@@ -40,6 +42,11 @@ export interface SessionSnapshot {
    * screens name the pose instead of showing a bare countdown.
    */
   retakingSlot: number | null
+  /**
+   * This session's own unguessable id. It is what a guest's link carries, so the
+   * screen can show a code for these photos and no one else's.
+   */
+  token: string | null
   /** Set once the strip is composed and archived. */
   stripUrl: string | null
   sessionFolder: string | null

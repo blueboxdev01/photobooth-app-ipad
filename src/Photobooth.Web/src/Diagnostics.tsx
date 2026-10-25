@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AppShell } from './AppShell'
 import { Settings } from './Settings'
-import { useWebcams } from './useWebcams'
 
 interface IngestRow {
   atUtc: string
@@ -44,7 +43,6 @@ const gb = (bytes: number | null) =>
 export function Diagnostics() {
   const [d, setD] = useState<Diag | null>(null)
   const [marked, setMarked] = useState<string | null>(null)
-  const { devices, selected, choose, error: camError, refresh } = useWebcams()
 
   const load = useCallback(async () => {
     try {
@@ -93,29 +91,6 @@ export function Diagnostics() {
                 Reaches the app as JPEGs in the watch folder via EOS Utility.
                 The app <strong>cannot</strong> trigger it
                 {d.camera.canTrigger ? ' (unexpectedly reports it can!)' : ''}.
-              </td>
-            </tr>
-            <tr>
-              <th>Preview — webcam</th>
-              <td>
-                {camError && <span className="bad">{camError} </span>}
-                <select
-                  className="control"
-                  value={selected ?? ''}
-                  onChange={(e) => choose(e.target.value || null)}
-                >
-                  <option value="">Default camera</option>
-                  {devices.map((dev, i) => (
-                    <option key={dev.deviceId} value={dev.deviceId}>
-                      {dev.label || `Camera ${i + 1}`}
-                    </option>
-                  ))}
-                </select>{' '}
-                <button className="btn" onClick={() => void refresh()}>Rescan</button>
-                <div className="muted small">
-                  {devices.length} video device{devices.length === 1 ? '' : 's'} found.
-                  Used for the posing mirror only — never for capture.
-                </div>
               </td>
             </tr>
           </tbody>

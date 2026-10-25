@@ -47,6 +47,13 @@ public sealed class SessionEngine : IDisposable
     private DateTimeOffset? _startedUtc;
     private string? _message;
     private string? _stripUrl;
+
+    /// <summary>
+    /// The finished session's id, for the guest's link. Set when composing ends
+    /// and cleared when the next guest arrives, so the screen can never offer one
+    /// guest a code for another's photos.
+    /// </summary>
+    private string? _token;
     private string? _sessionFolder;
 
     public SessionEngine(
@@ -85,6 +92,7 @@ public sealed class SessionEngine : IDisposable
             _photos.Clear();
             _order.Clear();
             _retakeSlot = null;
+            _token = null;
             _startedUtc = _time.GetUtcNow();
             _message = null;
             _stripUrl = null;
@@ -374,7 +382,8 @@ public sealed class SessionEngine : IDisposable
     }
 
     /// <summary>The strip is built and archived.</summary>
-    public SessionSnapshot CompleteComposing(string stripUrl, string sessionFolder)
+    public SessionSnapshot CompleteComposing(
+        string stripUrl, string sessionFolder, string? token = null)
     {
         SessionSnapshot snapshot;
         lock (_sync)
@@ -386,6 +395,7 @@ public sealed class SessionEngine : IDisposable
 
             _stripUrl = stripUrl;
             _sessionFolder = sessionFolder;
+            _token = token;
             _state = SessionState.Done;
             snapshot = Build();
         }
@@ -429,6 +439,7 @@ public sealed class SessionEngine : IDisposable
             _photos.Clear();
             _order.Clear();
             _retakeSlot = null;
+            _token = null;
             _state = SessionState.Idle;
             _countdownEnds = null;
             _timeoutAt = null;
@@ -518,7 +529,9 @@ public sealed class SessionEngine : IDisposable
         _message,
         _stripUrl,
         _sessionFolder,
-        _retakeSlot);
+        _retakeSlot,
+        _token,
+        _time.GetUtcNow());
 
     private void Publish(SessionSnapshot snapshot) => Changed?.Invoke(this, snapshot);
 

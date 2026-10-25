@@ -7,6 +7,12 @@
     <ProjectReference Include="..\Photobooth.Delivery\Photobooth.Delivery.csproj" />
   </ItemGroup>
 
+  <!-- The guest-display allowlist is the boundary that keeps the operator console
+       off a venue's network, so it is tested directly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Photobooth.Server.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -21,6 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
   </ItemGroup>
 
   <!-- Put wwwroot next to the built app, matching the layout `dotnet publish`
@@ -48,7 +55,11 @@
     </Exec>
     <PropertyGroup>
       <ResolvedGitSha Condition="'$(GitExitCode)' != '0' or '$(ResolvedGitSha)' == ''">unknown</ResolvedGitSha>
-      <InformationalVersion>$(Version)+$(ResolvedGitSha)</InformationalVersion>
+      <!-- "-ipad" so a tester quoting the version cannot confuse this build with
+           the main repo's. The tag stays a plain vX.Y.Z, because CI's version
+           regex only matches that and a suffix there would silently fall back to
+           whatever number this file happens to hold. -->
+      <InformationalVersion>$(Version)-ipad+$(ResolvedGitSha)</InformationalVersion>
     </PropertyGroup>
   </Target>
 

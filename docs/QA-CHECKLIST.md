@@ -60,7 +60,7 @@ If this works, everything else on this list is refinement.
 
 ## Section 1 — Setup
 
-**Setup → Folders**
+**Settings → Folders**
 
 - [ ] Watch folder matches EOS Utility's save location **exactly**
 - [ ] Press **Check** — reports usable, not just "exists"
@@ -68,18 +68,18 @@ If this works, everything else on this list is refinement.
 - [ ] The two folders are **different**
 - [ ] Free disk space is at least 2 GB, ideally 10× your expected sessions × 30 MB
 
-**Setup → Strip layout**
+**Settings → Strip layout**
 
 - [ ] Output size chosen, and it is the size you are actually delivering
 - [ ] Photos per strip set; min and max bound what the event allows
 - [ ] Slots look evenly placed in **Templates**
 
-**Setup → Timings**
+**Settings → Timings**
 
 - [ ] Countdown set to what suits your guests (default 3s)
 - [ ] No-photo timeout longer than the real press-to-file latency you measured in 0.1
 
-**Setup → Guest display**
+**Settings → Guest display**
 
 - [ ] Backdrop colour or image set for the event
 
@@ -100,7 +100,7 @@ put a wrong photo on a strip.
 | Drop a huge file in slowly | Waits for it to finish, never reads a half-written file | ☐ |
 | Fill the watch folder with 200 old files, start a session | Only new ones count | ☐ |
 
-- [ ] **Setup → Ingest decisions** names a reason for every rejection
+- [ ] **Settings → Ingest decisions** names a reason for every rejection
 
 ---
 
@@ -178,23 +178,78 @@ put a wrong photo on a strip.
 
 On the actual monitor, at its actual resolution, fullscreen.
 
-- [ ] Mirror is large and legible from where a guest stands
-- [ ] Feed is **mirrored** (raise your right hand; it appears on the right)
-- [ ] Corner brackets match the **template you are using** — change output size and check they change
-- [ ] Head-room line and centre mark visible
-- [ ] Outside the brackets is dimmed, so the crop is obvious
-- [ ] Countdown legible from **two metres**
+- [ ] Attract screen reads **Step in and smile**, with the empty slots below
+- [ ] Countdown legible from **two metres** — it should fill the screen
+- [ ] Each shot appears in its slot as it is taken
+- [ ] Review shows the shots large enough to judge from where a guest stands
+- [ ] Finished strip and its QR are both readable from a normal distance
 - [ ] Nothing important is cut off by overscan
 - [ ] Backdrop colour or image appears
 
-**The framing guide is uncalibrated.** The webcam's field of view has never been
-measured against the R50's. Verify it honestly:
+**There is no live preview.** The screen shows only what the booth knows: the
+count, the shots already taken, and the strip. A guest cannot check their
+framing before the shutter fires, so the thing to judge here is whether the
+booth is marked well enough that they stand in the right place to begin with.
 
-1. Stand so you exactly fill the brackets.
-2. Take a shot.
-3. Compare the strip against what the guide promised.
+- [ ] Guests end up framed without being told where to stand, **or** the floor
+      is marked
 
-- [ ] The guide is close enough to trust, **or** written down how far out it is
+---
+
+## Section 8b — The iPad as the guest display
+
+Skip if you are using a monitor. Settings is **[IPAD-DISPLAY.md](IPAD-DISPLAY.md)**.
+
+- [ ] Certificate installed **and trusted** under Certificate Trust Settings
+- [ ] Display opens with a **padlock**, and the attract screen appears
+- [ ] Added to the Home Screen and launched from there — fullscreen, no Safari bars
+- [ ] Guided Access on, so a guest cannot exit the display
+- [ ] Left idle **15 minutes** — the screen does not dim or sleep
+
+**What must not be reachable from the iPad.** Try each; all should fail:
+
+| On the iPad, open | Expected | ✓ |
+|---|---|---|
+| `https://<booth>:5002/operator` | Not found | ☐ |
+| `https://<booth>:5002/diagnostics` | Not found | ☐ |
+| `https://<booth>:5002/api/settings` | Not found | ☐ |
+| `https://<booth>:5002/api/session/abort` | Not found | ☐ |
+
+**Surviving the real world:**
+
+- [ ] Restart the booth — the iPad reconnects with **no re-install**
+- [ ] Join a different network — still works, nothing to redo
+- [ ] Turn the wifi off mid-session — the guest screen freezes but the session
+      completes, photos intact
+- [ ] You know the fallback: plug in a monitor, open `/display` on the laptop
+
+---
+
+## Section 8c — Guests downloading their own photos
+
+Skip if you are handing photos over by hand. Settings is
+**[GUEST-PHOTOS.md](GUEST-PHOTOS.md)**.
+
+From **your own phone**, on the booth's wifi:
+
+- [ ] The join code actually joins the network, without typing a password
+- [ ] The photos code opens **your** session
+- [ ] The strip and every photo are there
+- [ ] Download one — it opens, and is named for the session
+- [ ] **Download all as a zip** — it opens, and holds every file
+- [ ] Run a second session: its code shows different photos
+
+**What a guest must not reach.** Try each from the phone; all should refuse:
+
+| On the phone, open | Expected | ✓ |
+|---|---|---|
+| The link with one character changed | "We cannot find those photos" | ☐ |
+| `.../session.json` on your own link | Not found | ☐ |
+| `http://<booth>:<port>/operator` | The iPad setup page, **not** the console | ☐ |
+| `http://<booth>:<port>/api/session/abort` | Same, and the session keeps running | ☐ |
+
+- [ ] Leave the wifi, then open the link again — it should stop working, and you
+      should be comfortable explaining that to a guest
 
 ---
 
@@ -202,7 +257,7 @@ measured against the R50's. Verify it honestly:
 
 Skip if you are running without Google Drive.
 
-**Setup → Guest delivery**
+**Settings → Guest delivery**
 
 - [ ] Account shown is the **booth** account, not a personal one
 - [ ] Consent screen is **In production**, not Testing — otherwise the sign-in dies after 7 days, mid-event
@@ -247,7 +302,7 @@ The one that finds what single sessions never do.
 - [ ] Drive folders are "anyone with the link" — a forwarded link works for whoever holds it
 - [ ] No guest names in folder names
 - [ ] You have a retention period in mind, covering the laptop, Drive, and any backup
-- [ ] **Setup → Download diagnostics bundle** — confirm it contains **no photographs** and no credentials
+- [ ] **Settings → Download diagnostics bundle** — confirm it contains **no photographs** and no credentials
 
 ---
 
@@ -259,7 +314,6 @@ Things that will happen at an event.
 |---|---|---|
 | Kill the app mid-session, restart | Comes back clean; earlier sessions intact | ☐ |
 | Restart with a session waiting to upload | It uploads without being asked | ☐ |
-| Unplug the webcam mid-session | Capture still works; mirror shows an error, not a blank screen | ☐ |
 | Close the guest display browser window, reopen | Reconnects to the running session | ☐ |
 | Change the watch folder mid-event | Applies immediately, no restart | ☐ |
 
