@@ -1,15 +1,12 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Photobooth.Core;
 using Photobooth.Imaging;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.PixelFormats;
 using SkiaSharp;
 
 namespace Photobooth.Imaging.Tests;
 
 /// <summary>
-/// The looping GIF of a strip.
+/// The looping video of a strip.
 ///
 /// <para>
 /// A session has three or four stills and no burst capture, so the motion comes
@@ -70,42 +67,43 @@ public sealed class StripAnimationTests : IDisposable
         return paths;
     }
 
-    private string Animate(AnimationOptions? options = null)
-    {
-        var path = Path.Combine(_work, "strip.gif");
-        _compositor.ComposeAnimation(ThreeAcross(), SolidPhotos(), _work, path, options);
-        return path;
-    }
+    /// <summary>
+    /// The frames of one pass of the loop. Tested here rather than through the
+    /// encoder so these run on a machine with no ffmpeg; the encoder has its own
+    /// tests, which skip themselves when it is missing.
+    /// </summary>
+    private List<SKBitmap> Frames(AnimationOptions? options = null) =>
+        _compositor.RenderAnimationFrames(
+            ThreeAcross(), SolidPhotos(), _work, options ?? AnimationOptions.Default);
 
     /// <summary>
     /// Which of the three source colours a pixel is. Classified by dominant
-    /// channel rather than exact equality, because GIF's 256-colour palette is
-    /// reached through a quantiser and need not return the exact bytes.
+    /// channel rather than exact equality, so a change of resampler cannot make
+    /// these tests fail for a reason that has nothing to do with the rotation.
     /// </summary>
-    private static int ColourIndex(Rgba32 pixel)
+    private static int ColourIndex(SKColor pixel)
     {
-        if (pixel.R > pixel.G && pixel.R > pixel.B) return 0;   // red
-        if (pixel.G > pixel.R && pixel.G > pixel.B) return 1;   // green
-        if (pixel.B > pixel.R && pixel.B > pixel.G) return 2;   // blue
+        if (pixel.Red > pixel.Green && pixel.Red > pixel.Blue) return 0;   // red
+        if (pixel.Green > pixel.Red && pixel.Green > pixel.Blue) return 1; // green
+        if (pixel.Blue > pixel.Red && pixel.Blue > pixel.Green) return 2;  // blue
         return -1;
     }
 
-    /// <summary>The colour in each slot, for each frame of the decoded GIF.</summary>
-    private static int[][] SlotColours(Image<Rgba32> gif, StripTemplate template)
+    /// <summary>The colour in each slot, for each frame.</summary>
+    private static int[][] SlotColours(IReadOnlyList<SKBitmap> frames, StripTemplate template)
     {
         var canvas = StripCompositor.Shrink(template.Canvas, AnimationOptions.Default.LongestEdge);
 
-        var result = new int[gif.Frames.Count][];
+        var result = new int[frames.Count][];
 
-        for (var f = 0; f < gif.Frames.Count; f++)
+        for (var f = 0; f < frames.Count; f++)
         {
-            var frame = gif.Frames[f];
             var colours = new int[template.Slots.Count];
 
             for (var s = 0; s < template.Slots.Count; s++)
             {
                 var (x, y, w, h) = template.Slots[s].ToPixels(canvas);
-                colours[s] = ColourIndex(frame[x + (w / 2), y + (h / 2)]);
+                colours[s] = ColourIndex(frames[f].GetPixel(x + (w / 2), y + (h / 2)));
             }
 
             result[f] = colours;
@@ -123,9 +121,9 @@ public sealed class StripAnimationTests : IDisposable
     [Fact]
     public void No_two_slots_ever_show_the_same_photo()
     {
-        using var gif = Image.Load<Rgba32>(Animate());
+        var bitmaps = Frames();
 
-        var frames = SlotColours(gif, ThreeAcross());
+        var frames = SlotColours(bitmaps, ThreeAcross());
 
         for (var f = 0; f < frames.Length; f++)
         {
@@ -145,9 +143,9 @@ public sealed class StripAnimationTests : IDisposable
     public void Every_photo_visits_every_slot_exactly_once()
     {
         var template = ThreeAcross();
-        using var gif = Image.Load<Rgba32>(Animate());
+        var bitmaps = Frames();
 
-        var frames = SlotColours(gif, template);
+        var frames = SlotColours(bitmaps, template);
 
         for (var slot = 0; slot < template.Slots.Count; slot++)
         {
@@ -165,19 +163,17 @@ public sealed class StripAnimationTests : IDisposable
     public void The_first_frame_is_the_strip_as_printed()
     {
         var template = ThreeAcross();
-        using var gif = Image.Load<Rgba32>(Animate());
+        var bitmaps = Frames();
 
-        Assert.Equal([0, 1, 2], SlotColours(gif, template)[0]);
+        Assert.Equal([0, 1, 2], SlotColours(bitmaps, template)[0]);
     }
 
-    // --- the file itself ------------------------------------------------------
+    // --- the frames -----------------------------------------------------------
 
     [Fact]
     public void There_is_one_frame_per_photo()
     {
-        using var gif = Image.Load<Rgba32>(Animate());
-
-        Assert.Equal(Palette.Length, gif.Frames.Count);
+        Assert.Equal(Palette.Length, Frames().Count);
     }
 
     /// <summary>
@@ -187,48 +183,96 @@ public sealed class StripAnimationTests : IDisposable
     [Fact]
     public void The_animation_is_smaller_than_the_printed_strip()
     {
-        using var gif = Image.Load<Rgba32>(Animate());
+        var frame = Frames()[0];
 
-        Assert.Equal(1000, gif.Width);
-        Assert.Equal(300, gif.Height);
+        Assert.Equal(1000, frame.Width);
+        Assert.Equal(300, frame.Height);
     }
 
-    [Fact]
-    public void It_loops_for_ever()
-    {
-        using var gif = Image.Load<Rgba32>(Animate());
+    // --- the clip -------------------------------------------------------------
 
-        // 0 is GIF's "repeat indefinitely".
-        Assert.Equal(0, gif.Metadata.GetGifMetadata().RepeatCount);
+    /// <summary>
+    /// A video, unlike a GIF, does not loop by itself once it has been posted,
+    /// and Instagram refuses anything under three seconds. A cycle of three
+    /// photos at 400ms is 1.2s, so it has to be repeated to reach the minimum.
+    /// </summary>
+    [Fact]
+    public void The_cycle_is_repeated_until_the_clip_is_long_enough()
+    {
+        var list = Mp4Writer.ConcatList(3, new AnimationOptions(FrameDelayMilliseconds: 400, MinimumSeconds: 6));
+
+        // 6s / 1.2s per cycle = 5 cycles of 3 frames, plus the closing entry.
+        Assert.Equal(15, list.Split('\n').Count(l => l.StartsWith("duration ")));
+        Assert.Equal(16, list.Split('\n').Count(l => l.StartsWith("file ")));
     }
 
     /// <summary>
-    /// GIF counts delay in hundredths of a second, so the requested milliseconds
-    /// have to survive that conversion.
+    /// ffmpeg ignores the duration of the final entry, so the last photo needs
+    /// listing once more or it flashes past for a single frame.
     /// </summary>
+    [Fact]
+    public void The_last_frame_is_listed_again_without_a_duration()
+    {
+        var lines = Mp4Writer.ConcatList(3, AnimationOptions.Default)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.StartsWith("file ", lines[^1]);
+        Assert.StartsWith("duration ", lines[^2]);
+        Assert.Equal(lines[^1], lines[^3]);
+    }
+
     [Fact]
     public void Each_frame_is_held_for_the_requested_time()
     {
-        using var gif = Image.Load<Rgba32>(
-            Animate(new AnimationOptions(FrameDelayMilliseconds: 500)));
+        var list = Mp4Writer.ConcatList(3, new AnimationOptions(FrameDelayMilliseconds: 500));
 
-        foreach (var frame in gif.Frames)
-        {
-            Assert.Equal(50, frame.Metadata.GetGifMetadata().FrameDelay);
-        }
+        Assert.Contains("duration 0.5\n", list);
     }
 
     /// <summary>
-    /// A browser renders a zero delay however it likes, and some race through the
-    /// loop. Anything absurdly fast is clamped rather than passed through.
+    /// The one test that runs the real encoder, and the one that would have
+    /// caught a file every laptop plays and every phone refuses. Skips itself
+    /// where ffmpeg is not installed rather than failing a build for it; the
+    /// release workflow checks the bundled copy separately.
     /// </summary>
     [Fact]
-    public void An_impossibly_short_delay_is_clamped_rather_than_left_at_zero()
+    public void The_encoded_clip_is_an_h264_mp4_with_even_sides()
     {
-        using var gif = Image.Load<Rgba32>(
-            Animate(new AnimationOptions(FrameDelayMilliseconds: 1)));
+        var ffmpeg = Mp4Writer.FindFfmpeg(null);
+        if (!CanRun(ffmpeg))
+        {
+            return;
+        }
 
-        Assert.True(gif.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay > 0);
+        var path = Path.Combine(_work, "strip.mp4");
+        _compositor.ComposeAnimation(ThreeAcross(), SolidPhotos(), _work, path);
+
+        var bytes = File.ReadAllBytes(path);
+        Assert.True(bytes.Length > 1000, "the video is suspiciously small");
+
+        // An MP4 starts with a box whose type is "ftyp" at offset 4.
+        Assert.Equal("ftyp", System.Text.Encoding.ASCII.GetString(bytes, 4, 4));
+    }
+
+    private static bool CanRun(string ffmpeg)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(ffmpeg, "-version")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+            process!.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

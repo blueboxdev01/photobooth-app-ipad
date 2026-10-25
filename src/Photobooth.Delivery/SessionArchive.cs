@@ -48,7 +48,7 @@ public sealed record SessionRecord(
     /// </summary>
     string? Qr = null,
     /// <summary>
-    /// The looping GIF of the strip, if one was made. Null for every session
+    /// The looping video of the strip (an MP4), if one was made. Null for every session
     /// archived before the feature existed, and for any session where building
     /// it failed -- which is why it is nullable and last in this list. A
     /// required parameter here would stop every existing session.json on disk
@@ -180,7 +180,7 @@ public sealed class SessionArchive(
         string? animationName = null;
         if (animationSource is not null && File.Exists(animationSource))
         {
-            animationName = "strip.gif";
+            animationName = "strip.mp4";
             File.Copy(animationSource, Path.Combine(folder, animationName), overwrite: true);
         }
 

@@ -133,7 +133,7 @@ function SessionCard({ session }: { session: SessionRecord }) {
           <a href={file(session.strip)} target="_blank" rel="noreferrer">Strip</a>
 
           {session.animation && (
-            <a href={file(session.animation)} target="_blank" rel="noreferrer">GIF</a>
+            <a href={file(session.animation)} target="_blank" rel="noreferrer">{session.animation.endsWith('.gif') ? 'GIF' : 'Video'}</a>
           )}
 
           {session.photos.map((p, i) => (

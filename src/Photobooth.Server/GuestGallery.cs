@@ -102,12 +102,14 @@ public static class GuestGallery
         }
 
         // Declared from the extension rather than assumed. A GIF served as
-        // image/jpeg reaches the phone as a still: iOS trusts the type it was
-        // given when saving to the camera roll, so the animation is simply lost.
+        // image/jpeg reaches the phone as a still, and a video served as
+        // anything but video/mp4 will not play: iOS trusts the type it was
+        // given when saving to the camera roll.
         context.Response.ContentType = Path.GetExtension(allowed).ToLowerInvariant() switch
         {
             ".png" => "image/png",
             ".gif" => "image/gif",
+            ".mp4" => "video/mp4",
             _ => "image/jpeg",
         };
 
@@ -128,7 +130,66 @@ public static class GuestGallery
         context.Response.Headers.ContentDisposition =
             $"inline; filename=\"{Download(record, allowed)}\"";
 
-        await context.Response.SendFileAsync(full);
+        await SendFileAsync(context, full);
+    }
+
+    /// <summary>
+    /// Sends the file, answering a byte-range request if it is one.
+    ///
+    /// iOS Safari will not play a video from a server that cannot serve ranges:
+    /// it asks for the first two bytes to probe, gets the whole file back with a
+    /// 200, and gives up with a black rectangle. Photos never needed this.
+    /// </summary>
+    private static async Task SendFileAsync(HttpContext context, string full)
+    {
+        var length = new FileInfo(full).Length;
+        context.Response.Headers.AcceptRanges = "bytes";
+
+        var header = context.Request.GetTypedHeaders().Range;
+        var range = header is not null
+            && header.Unit.Equals("bytes", StringComparison.OrdinalIgnoreCase)
+            && header.Ranges.Count == 1
+                ? header.Ranges.First()
+                : null;
+
+        if (range is null)
+        {
+            await context.Response.SendFileAsync(full);
+            return;
+        }
+
+        long start;
+        long end;
+
+        if (range.From is { } first)
+        {
+            start = first;
+            end = Math.Min(range.To ?? length - 1, length - 1);
+        }
+        else if (range.To is { } suffix)
+        {
+            // "the last N bytes"
+            start = Math.Max(0, length - suffix);
+            end = length - 1;
+        }
+        else
+        {
+            await context.Response.SendFileAsync(full);
+            return;
+        }
+
+        if (start >= length || start > end)
+        {
+            context.Response.StatusCode = StatusCodes.Status416RangeNotSatisfiable;
+            context.Response.Headers.ContentRange = $"bytes */{length}";
+            return;
+        }
+
+        context.Response.StatusCode = StatusCodes.Status206PartialContent;
+        context.Response.Headers.ContentRange = $"bytes {start}-{end}/{length}";
+        context.Response.ContentLength = end - start + 1;
+
+        await context.Response.SendFileAsync(full, start, end - start + 1);
     }
 
     /// <summary>
@@ -251,7 +312,7 @@ public static class GuestGallery
             var label = (isStrip, isAnimation) switch
             {
                 (true, _) => "The strip",
-                (_, true) => "The animation",
+                (_, true) => "The video",
                 _ => name.Replace("photo-", "Photo ").Replace(".jpg", ""),
             };
 
@@ -259,9 +320,17 @@ public static class GuestGallery
             // is worth watching, and neither reads at thumbnail size.
             var wide = isStrip || isAnimation ? " tile--strip" : string.Empty;
 
+            // A video is shown playing, without controls, so a tap lands on the
+            // link and opens the file itself. That is deliberate: the full-screen
+            // player is the one with iOS's share button, and Save Video there is
+            // what puts it in Photos, from where it can be posted.
+            var media = name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
+                ? $"""<video src="{href}" autoplay loop muted playsinline preload="auto"></video>"""
+                : $"""<img src="{href}" alt="">""";
+
             return $"""
                       <a class="tile{wide}" href="{href}">
-                        <img src="{href}" alt="">
+                        {media}
                         <span>{WebUtility.HtmlEncode(label)}</span>
                       </a>
                 """;
@@ -286,8 +355,8 @@ public static class GuestGallery
                       border: 1px solid #d7dae0; border-radius: 12px; overflow: hidden;
                       background: #fff; }
               .tile--strip { grid-column: 1 / -1; }
-              .tile img { display: block; width: 100%; height: auto; }
-              .tile--strip img { max-height: 60vh; width: auto; margin: 0 auto; }
+              .tile img, .tile video { display: block; width: 100%; height: auto; }
+              .tile--strip img, .tile--strip video { max-height: 60vh; width: auto; max-width: 100%; margin: 0 auto; }
               .tile span { display: block; padding: 9px 12px; font-size: 13.5px;
                            font-weight: 600; }
               .how { margin: 0 0 18px; padding: 12px 14px; font-size: 14.5px;
@@ -312,6 +381,8 @@ public static class GuestGallery
             <p class="how"><b>Tap a photo</b>, then <b>touch and hold it</b> and choose
                <b>Add to Photos</b> &mdash; or <b>Download image</b> on Android. That
                puts it straight in your camera roll.</p>
+            <p class="how"><b>To post the video</b> to Facebook or Instagram, tap it,
+               then use the <b>share</b> button and choose <b>Save Video</b>.</p>
 
             <div class="grid">
             {{tiles}}

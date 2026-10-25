@@ -143,14 +143,42 @@ public sealed class GuestDisplayEndToEndTests : IClassFixture<BoothProcess>
         Assert.Equal(HttpStatusCode.OK, strip.StatusCode);
         Assert.Equal("image/jpeg", strip.Content.Headers.ContentType?.MediaType);
 
-        var animation = await _booth.Display.GetAsync($"/api/sessions/{folder}/strip.gif");
+        // The video needs ffmpeg, which a developer's machine may not have. The
+        // release workflow installs it, so there this is always checked.
+        if (!FfmpegAvailable())
+        {
+            return;
+        }
+
+        var animation = await _booth.Display.GetAsync($"/api/sessions/{folder}/strip.mp4");
         Assert.Equal(HttpStatusCode.OK, animation.StatusCode);
-        Assert.Equal("image/gif", animation.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("video/mp4", animation.Content.Headers.ContentType?.MediaType);
 
         // Not an empty body pretending to be a picture.
         Assert.True(
             (await animation.Content.ReadAsByteArrayAsync()).Length > 1000,
             "the animation came back suspiciously small");
+    }
+
+    private static bool FfmpegAvailable()
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo("ffmpeg", "-version")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+            process!.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>Everything the guest screen loads on its way up.</summary>

@@ -33,7 +33,7 @@ interface SettingsResponse {
     backgroundImage: string | null
   }
   animation: {
-    /** Whether each session also gets a looping GIF of its strip. */
+    /** Whether each session also gets a looping video of its strip. */
     enabled: boolean
   }
   guestGallery: {
@@ -389,7 +389,7 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
       </div>
 
       <div className="settings__group">
-        <h3>Animated GIF</h3>
+        <h3>Looping video</h3>
 
         <div className="controls">
           <button className="btn btn--primary" disabled={busy}
@@ -397,16 +397,17 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
                     { animationEnabled: !data.animation.enabled },
                     data.animation.enabled
                       ? 'Sessions will produce a strip only.'
-                      : 'Sessions will also produce a looping GIF.')}>
-            {data.animation.enabled ? 'Stop making GIFs' : 'Also make a GIF of each strip'}
+                      : 'Sessions will also produce a looping video.')}>
+            {data.animation.enabled ? 'Stop making videos' : 'Also make a video of each strip'}
           </button>
         </div>
 
         <p className="muted small">
           {data.animation.enabled
-            ? <>A looping copy of the strip, saved as <code>strip.gif</code> beside it,
-                with the photos moving between the frames. Guests get it alongside
-                their photos. It adds about a second to each session &mdash; turn it
+            ? <>A short MP4 of the strip, saved as <code>strip.mp4</code> beside it,
+                with the photos moving between the frames. Unlike a GIF it can be
+                posted to Facebook and Instagram. Guests get it alongside their
+                photos. It adds about a second to each session &mdash; turn it
                 off if a queue is building.</>
             : <>Off. Sessions produce the strip and the photos only.</>}
         </p>

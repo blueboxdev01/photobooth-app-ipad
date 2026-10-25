@@ -149,7 +149,7 @@ Run a session with the mock camera through to the end, then from the phone:
 | Tap one photo | It opens full screen &mdash; it does **not** download |
 | Touch and hold that photo | iOS offers **Add to Photos**, Android **Download image** |
 | Use it, then open Photos | The picture is in the camera roll, named after the session |
-| Tap **Or download everything as one file** | A zip downloads and holds the strip, the GIF and every photo |
+| Tap **Or download everything as one file** | A zip downloads and holds the strip, the video and every photo |
 | Look for `session.json` | It is **not** in the zip and **not** on the page |
 
 ### B6. A guest cannot reach anything else

@@ -54,9 +54,10 @@ public sealed class GuestGalleryTests : IDisposable
         string? gif = null;
         if (animated)
         {
-            gif = Path.Combine(_root, $"src-anim-{token}.gif");
-            // A real GIF header, so a content-type claim can be believed.
-            File.WriteAllBytes(gif, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
+            gif = Path.Combine(_root, $"src-anim-{token}.mp4");
+            // A real MP4 header (an ftyp box), so a content-type claim can be believed.
+            File.WriteAllBytes(gif, [0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D,
+                                     0, 0, 0, 0, 0x69, 0x73, 0x6F, 0x6D, 0, 0, 0, 0]);
         }
 
         return _archive.Save(token, template, captures, strip, at, gif);
@@ -217,16 +218,16 @@ public sealed class GuestGalleryTests : IDisposable
         Assert.Contains(record.Animation, html);
 
         // Named, not left to the fallback that would show a raw filename.
-        Assert.Contains("The animation", html);
+        Assert.Contains("The video", html);
     }
 
     /// <summary>
-    /// Served as image/gif rather than the image/jpeg everything non-PNG used
-    /// to get. iOS trusts the declared type when saving to the camera roll, so
-    /// the wrong one costs the guest the animation without any error.
+    /// Served as video/mp4 rather than the image/jpeg everything non-PNG used
+    /// to get. A phone will not play, or save as a video, a file that claims to
+    /// be a picture.
     /// </summary>
     [Fact]
-    public async Task The_animation_is_served_as_a_gif()
+    public async Task The_animation_is_served_as_a_video()
     {
         var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
 
@@ -234,7 +235,38 @@ public sealed class GuestGalleryTests : IDisposable
         await GuestGallery.TryServeAsync(context, _archive);
 
         Assert.Equal(200, context.Response.StatusCode);
-        Assert.Equal("image/gif", context.Response.ContentType);
+        Assert.Equal("video/mp4", context.Response.ContentType);
+    }
+
+    /// <summary>
+    /// iOS Safari probes a video with a range request, and a server that answers
+    /// it with the whole file and a 200 gets a black rectangle.
+    /// </summary>
+    [Fact]
+    public async Task A_range_request_for_the_video_gets_just_that_range()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+        var full = new FileInfo(Path.Combine(_archive.FolderFor(record), record.Animation!)).Length;
+
+        var context = Request($"/g/{record.Token}/{record.Animation}");
+        context.Request.Headers.Range = "bytes=0-1";
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        Assert.Equal(206, context.Response.StatusCode);
+        Assert.Equal($"bytes 0-1/{full}", context.Response.Headers.ContentRange.ToString());
+        Assert.Equal(2L, context.Response.ContentLength);
+    }
+
+    [Fact]
+    public async Task A_range_past_the_end_is_refused()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var context = Request($"/g/{record.Token}/{record.Animation}");
+        context.Request.Headers.Range = "bytes=99999-";
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        Assert.Equal(416, context.Response.StatusCode);
     }
 
     [Fact]
@@ -245,7 +277,7 @@ public sealed class GuestGalleryTests : IDisposable
         var (_, body) = await GetAsync($"/g/{record.Token}/all.zip");
 
         using var zip = new ZipArchive(new MemoryStream(body), ZipArchiveMode.Read);
-        Assert.Contains(zip.Entries, e => e.Name.EndsWith(".gif", StringComparison.Ordinal));
+        Assert.Contains(zip.Entries, e => e.Name.EndsWith(".mp4", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -260,7 +292,7 @@ public sealed class GuestGalleryTests : IDisposable
 
         var (status, body) = await GetAsync($"/g/{record.Token}");
         Assert.Equal(200, status);
-        Assert.DoesNotContain(".gif", Text(body));
+        Assert.DoesNotContain(".mp4", Text(body));
 
         var (_, zipped) = await GetAsync($"/g/{record.Token}/all.zip");
         using var zip = new ZipArchive(new MemoryStream(zipped), ZipArchiveMode.Read);

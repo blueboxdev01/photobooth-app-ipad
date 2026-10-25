@@ -131,6 +131,7 @@ public static class GuestEndpoint
             var file = Path.GetFileName(value);
 
             return file.Equals("strip.jpg", StringComparison.OrdinalIgnoreCase)
+                || file.Equals("strip.mp4", StringComparison.OrdinalIgnoreCase)
                 || file.Equals("strip.gif", StringComparison.OrdinalIgnoreCase)
                 || file.Equals("qr.png", StringComparison.OrdinalIgnoreCase);
         }

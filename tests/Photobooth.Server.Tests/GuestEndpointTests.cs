@@ -46,7 +46,7 @@ public sealed class GuestEndpointTests
     /// </summary>
     [Theory]
     [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg")]
-    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.gif")]
+    [InlineData("/api/sessions/2026-09-13_1042_ab12cd/strip.mp4")]
     [InlineData("/api/sessions/2026-09-13_1042_ab12cd/qr.png")]
     public void A_finished_sessions_own_pictures_reach_the_display(string path)
     {
@@ -155,7 +155,7 @@ public sealed class GuestEndpointTests
         // What the guest screen actually shows once a session is over.
         Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/qr.png"));
         Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.jpg"));
-        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.gif"));
+        Assert.True(GuestEndpoint.IsGuestPath("/api/sessions/2026-09-13_1042_ab12cd/strip.mp4"));
 
         // The archive listing, the record that carries the token, and the raw
         // frames -- which the display shows from the watch folder while a session

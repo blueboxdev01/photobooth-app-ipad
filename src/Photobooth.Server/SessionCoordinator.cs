@@ -135,7 +135,7 @@ public sealed class SessionCoordinator : IHostedService
     private async Task ComposeAsync(SessionSnapshot snapshot)
     {
         var temp = Path.Combine(Path.GetTempPath(), $"pb-strip-{Guid.NewGuid():N}.jpg");
-        var tempAnimation = Path.Combine(Path.GetTempPath(), $"pb-anim-{Guid.NewGuid():N}.gif");
+        var tempAnimation = Path.Combine(Path.GetTempPath(), $"pb-anim-{Guid.NewGuid():N}.mp4");
 
         try
         {
@@ -180,13 +180,13 @@ public sealed class SessionCoordinator : IHostedService
     }
 
     /// <summary>
-    /// The looping GIF of the strip, or null.
+    /// The looping MP4 of the strip, or null.
     ///
     /// <para>
     /// Deliberately swallows its own failures. The strip and the photos are the
     /// deliverable; the animation is a bonus on top, and it is not worth costing
     /// a guest their session. A booth with a queue would rather hand over a
-    /// strip and no GIF than send someone back to the front of the line.
+    /// strip and no video than send someone back to the front of the line.
     /// </para>
     /// </summary>
     private async Task<string?> AnimateAsync(

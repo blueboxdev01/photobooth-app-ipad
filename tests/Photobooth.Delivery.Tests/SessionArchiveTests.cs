@@ -90,19 +90,19 @@ public sealed class SessionArchiveTests : IDisposable
         var photo = Path.Combine(_root, "src.jpg");
         File.WriteAllBytes(photo, [0xFF, 0xD8, 0xFF, 0xD9]);
 
-        var gif = Path.Combine(_root, "src.gif");
-        File.WriteAllBytes(gif, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
+        var gif = Path.Combine(_root, "src.mp4");
+        File.WriteAllBytes(gif, [0x66, 0x74, 0x79, 0x70]);
 
         var template = new StripTemplate(
             "fake", new TemplateCanvas(600, 1800), [new TemplateSlot(0, 0, 1, 0.3)]);
 
         var record = _archive.Save(
-            "tokGIF", template,
+            "tokMP4", template,
             [new CapturedPhoto(photo, "IMG_0001.JPG", 4, DateTimeOffset.UtcNow)],
             photo, DateTimeOffset.UtcNow, gif);
 
-        Assert.Equal("strip.gif", record.Animation);
-        Assert.True(File.Exists(Path.Combine(_archive.FolderFor(record), "strip.gif")));
+        Assert.Equal("strip.mp4", record.Animation);
+        Assert.True(File.Exists(Path.Combine(_archive.FolderFor(record), "strip.mp4")));
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ public sealed class SessionArchiveTests : IDisposable
         var record = Save();
 
         Assert.Null(record.Animation);
-        Assert.False(File.Exists(Path.Combine(_archive.FolderFor(record), "strip.gif")));
+        Assert.False(File.Exists(Path.Combine(_archive.FolderFor(record), "strip.mp4")));
     }
 
     /// <summary>

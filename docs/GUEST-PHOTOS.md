@@ -16,13 +16,19 @@ At the end of a session the guest screen shows two codes:
    iOS and Android join from the camera app without typing a password.
 2. **Scan for your photos** — their own session, and nobody else's.
 
-The page has the strip, **a looping GIF of it**, each photo, and a **Download
+The page has the strip, **a short video of it**, each photo, and a **Download
 all as a zip**, because a phone taking six files one at a time is something
 people give up on halfway.
 
-The GIF is the same strip with the photos rotating through its slots. It is
-about 160 KB, so it downloads as quickly as a single photo, and it can be
-turned off in **Settings > Animated GIF** if a queue is building.
+The video is the same strip with the photos rotating through its slots, repeated
+to about six seconds. It is an H.264 MP4, because that is what Facebook and
+Instagram accept -- they refuse a GIF. To post it, a guest taps the video, uses
+the share button and chooses **Save Video**, then picks it from their camera
+roll. It can be turned off in **Settings > Looping video** if a queue is
+building.
+
+It is made by `ffmpeg\ffmpeg.exe`, which ships beside the booth. If that file is
+missing, sessions still work and simply have no video.
 
 ---
 

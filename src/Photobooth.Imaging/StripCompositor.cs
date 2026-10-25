@@ -4,26 +4,38 @@ using SkiaSharp;
 
 namespace Photobooth.Imaging;
 
-/// <summary>How the looping GIF of a strip is built.</summary>
+/// <summary>How the looping video of a strip is built.</summary>
 /// <param name="LongestEdge">
 /// The animation's longest side in pixels. Deliberately far smaller than the
 /// printed strip: this is downloaded to a phone over the booth's own wifi, and
-/// GIF's 256 colours make a full-size one very large for no visible gain.
+/// a full-size video is a large download for no visible gain on a phone screen.
 /// </param>
 /// <param name="FrameDelayMilliseconds">
 /// How long each photo is held. Around 400ms reads as a photobooth loop; much
 /// faster and it is a flicker nobody can follow.
 /// </param>
+/// <param name="MinimumSeconds">
+/// The least the video runs for. A strip is three or four photos at a few
+/// hundred milliseconds each, which is under two seconds -- and a video file,
+/// unlike a GIF, does not loop by itself once it has been posted. Instagram will
+/// not take anything under three seconds, so the cycle is repeated to fill
+/// this.
+/// </param>
+/// <param name="FfmpegPath">
+/// Where ffmpeg is. Null looks next to the app, then on the PATH.
+/// </param>
 public sealed record AnimationOptions(
     int LongestEdge = 1000,
-    int FrameDelayMilliseconds = 400)
+    int FrameDelayMilliseconds = 400,
+    int MinimumSeconds = 6,
+    string? FfmpegPath = null)
 {
     public static AnimationOptions Default { get; } = new();
 }
 
 /// <summary>
 /// Draws the finished strip: background, photos into their slots, then the frame
-/// art on top. Also the looping GIF of the same thing.
+/// art on top. Also the looping video of the same thing.
 /// </summary>
 public sealed class StripCompositor(ILogger<StripCompositor> logger)
 {
@@ -92,7 +104,7 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
     }
 
     /// <summary>
-    /// Writes a looping GIF of the same strip, with the photos moving.
+    /// Writes a looping MP4 of the same strip, with the photos moving.
     ///
     /// <para>
     /// A session has three or four stills and no burst capture, so the motion
@@ -106,7 +118,7 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
     /// <para>
     /// Never fatal to a session. The caller treats a failure here as "no
     /// animation", because the strip and the photos are the thing that matters
-    /// and a GIF is not worth costing a guest their session.
+    /// and a video is not worth costing a guest their session.
     /// </para>
     /// </summary>
     public void ComposeAnimation(
@@ -118,11 +130,43 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
     {
         var settings = options ?? AnimationOptions.Default;
 
+        var frames = RenderAnimationFrames(template, photoPaths, templateFolder, settings);
+        var (width, height, count) = (frames[0].Width, frames[0].Height, frames.Count);
+
+        try
+        {
+            Mp4Writer.Write(frames, outputPath, settings);
+        }
+        finally
+        {
+            foreach (var frame in frames)
+            {
+                frame.Dispose();
+            }
+        }
+
+        logger.LogInformation(
+            "Composed {Output} ({Width}x{Height}, {Frames} frames at {Delay}ms)",
+            Path.GetFileName(outputPath), width, height,
+            count, settings.FrameDelayMilliseconds);
+    }
+
+    /// <summary>
+    /// The frames of one pass of the loop, in order. The caller owns and disposes
+    /// them. Split from the encoder so the rotation can be tested without
+    /// ffmpeg, which is the part that is easy to get subtly wrong.
+    /// </summary>
+    internal List<SKBitmap> RenderAnimationFrames(
+        StripTemplate template,
+        IReadOnlyList<string> photoPaths,
+        string templateFolder,
+        AnimationOptions settings)
+    {
         // Rendered small rather than at print size. Slots are stored as fractions
         // of the canvas precisely so a template survives a change of output size,
         // so shrinking the canvas carries the slots and the art with it for free
-        // -- and a full-size 256-colour GIF would be enormous for something a
-        // guest downloads over the booth's own wifi.
+        // -- and a full-size video would be a large download for something a
+        // guest watches on a phone over the booth's own wifi.
         var scaled = template with
         {
             Canvas = Shrink(template.Canvas, settings.LongestEdge),
@@ -166,8 +210,8 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
 
                 // Read into a bitmap of a colour type we have named, rather than
                 // whatever the platform would have picked. Windows defaults to
-                // BGRA, and handing that to a GIF encoder expecting RGBA gives a
-                // perfectly valid file in which everyone is blue.
+                // BGRA; naming the layout means the encoder is never handed
+                // pixels in an order it did not expect.
                 var info = new SKImageInfo(
                     scaled.Canvas.Width, scaled.Canvas.Height,
                     SKColorType.Rgba8888, SKAlphaType.Opaque);
@@ -182,23 +226,22 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
 
                 frames.Add(bitmap);
             }
-
-            GifWriter.Write(frames, outputPath, settings.FrameDelayMilliseconds);
         }
-        finally
+        catch
         {
             foreach (var frame in frames)
             {
                 frame.Dispose();
             }
 
+            throw;
+        }
+        finally
+        {
             Dispose(photos);
         }
 
-        logger.LogInformation(
-            "Composed {Output} ({Width}x{Height}, {Frames} frames at {Delay}ms)",
-            Path.GetFileName(outputPath), scaled.Canvas.Width, scaled.Canvas.Height,
-            frames.Count, settings.FrameDelayMilliseconds);
+        return frames;
     }
 
     /// <summary>

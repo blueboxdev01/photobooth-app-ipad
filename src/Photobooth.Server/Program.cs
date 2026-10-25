@@ -443,11 +443,14 @@ app.MapGet("/api/sessions/{folder}/{file}", (string folder, string file, Session
         ".jpg" or ".jpeg" => "image/jpeg",
         ".png" => "image/png",
         ".gif" => "image/gif",
+        ".mp4" => "video/mp4",
         ".json" => "application/json",
         _ => "application/octet-stream",
     };
 
-    return Results.File(full, type);
+    // Ranges, because iOS Safari will not play a video from a server that cannot
+    // answer a byte-range request.
+    return Results.File(full, type, enableRangeProcessing: true);
 });
 
 app.MapGet("/api/sessions", (SessionArchive archive) => Results.Ok(new

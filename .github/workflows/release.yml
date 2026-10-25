@@ -39,6 +39,34 @@ jobs:
           npm ci
           npm run build
 
+      # Guests post their video to Facebook and Instagram, which take H.264 and
+      # not GIF, and ffmpeg is what writes it. The LGPL build is used because it
+      # is the one that is fine to redistribute; it has no libx264, so it encodes
+      # through Windows' own H.264 encoder (h264_mf).
+      #
+      # Fetched before the tests, not just before packaging, so they run the real
+      # encoder instead of skipping it.
+      - name: Get ffmpeg
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'ffmpeg.zip'
+          $url = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip'
+          Invoke-WebRequest $url -OutFile $zip
+          $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
+          Expand-Archive $zip -DestinationPath $dir -Force
+          $exe = Get-ChildItem $dir -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          if (-not $exe) { throw "ffmpeg.exe was not in the download" }
+          echo "FFMPEG_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+          echo $exe.DirectoryName >> $env:GITHUB_PATH
+
+          # A build with no H.264 encoder would let every session quietly lose
+          # its video, so refuse to ship one.
+          $encoders = & $exe.FullName -hide_banner -encoders
+          if (-not ($encoders | Select-String -Pattern 'h264_mf|libx264')) {
+            throw "this ffmpeg build has no H.264 encoder"
+          }
+          Write-Host "ffmpeg has an H.264 encoder"
+
       - name: Test
         run: dotnet test --configuration Release --logger "console;verbosity=minimal"
 
@@ -74,6 +102,14 @@ jobs:
           if ($env:BUILD_VERSION) { $args += "-p:Version=$env:BUILD_VERSION" }
           dotnet @args
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Next to the exe, where the app looks for it first.
+      - name: Bundle ffmpeg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/publish/ffmpeg | Out-Null
+          Copy-Item $env:FFMPEG_EXE artifacts/publish/ffmpeg/ffmpeg.exe
+          & artifacts/publish/ffmpeg/ffmpeg.exe -version | Select-Object -First 1
 
       # A build that cannot run a mock session is useless to a field tester, and
       # "the folder exists" is not the same as "the folder has files in it" --
