@@ -106,6 +106,16 @@ public sealed class BoothSettings
     /// </summary>
     public string? GuestPhotosAddress { get; set; }
 
+    /// <summary>
+    /// Whether guests collect their photos at a separate claiming station (a
+    /// second screen on <c>/claim</c>) rather than from the booth screen.
+    ///
+    /// When on, the booth screen stops showing the photos code at the end of a
+    /// session and sends the guest to the station instead. Off by default, so a
+    /// booth with one screen behaves as it always has.
+    /// </summary>
+    public bool? ClaimStationEnabled { get; set; }
+
     // --- guest display ---
 
     /// <summary>

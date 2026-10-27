@@ -188,6 +188,8 @@ builder.Services.AddSingleton<StripCompositor>();
 builder.Services.AddSingleton<SessionArchive>();
 builder.Services.AddSingleton<SessionEngine>();
 builder.Services.AddSingleton<DiagnosticsService>();
+builder.Services.AddSingleton<ClaimBoard>();
+builder.Services.AddSingleton<StripPreviewStore>();
 builder.Services.AddSingleton<SessionCoordinator>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SessionCoordinator>());
 
@@ -249,6 +251,7 @@ app.MapGet("/api/state", (
         },
         session = engine.Snapshot,
         delivery = coordinator.CurrentDelivery(),
+        preview = coordinator.CurrentPreview(),
         slotAspect,
 
         // Where finished sessions are written. The console used to show only a
@@ -259,11 +262,37 @@ app.MapGet("/api/state", (
         {
             enabled = settings.Current.GuestGalleryEnabled ?? false,
             ssid = settings.Current.GuestWifiSsid,
+            claimStation = settings.Current.ClaimStationEnabled ?? false,
         },
 
         build = new { version = DiagnosticsService.Version },
     });
 });
+
+// The strip as it would print, drawn when the shots are in and shown on the guest
+// screen while the guest decides. In memory only, and only the latest one.
+app.MapGet("/api/session/preview.jpg", (StripPreviewStore previews) =>
+{
+    var bytes = previews.Bytes();
+    return bytes is null
+        ? Results.NotFound()
+        : Results.File(bytes, "image/jpeg");
+});
+
+// The guests who have finished and may still be walking to the claiming station.
+// Reachable from the guest port: the station is a screen on the guests' network.
+app.MapGet("/api/claim", (
+    SessionCoordinator coordinator, SettingsStore settings) => Results.Ok(new
+{
+    enabled = settings.Current.GuestGalleryEnabled ?? false,
+    ssid = settings.Current.GuestWifiSsid,
+    guests = coordinator.RecentFinished().Select(g => new
+    {
+        token = g.Token,
+        stripUrl = g.StripUrl,
+        finishedUtc = g.FinishedUtc,
+    }),
+}));
 
 // --- delivery ---
 
@@ -485,7 +514,12 @@ static bool IsSafeSegment(string value) =>
 
 // Serves a photo out of the watch folder. File name only -- no paths -- so a
 // crafted name cannot walk out of the folder.
-app.MapGet("/api/photos/{fileName}", (string fileName, WatchFolderCamera camera) =>
+//
+// "?w=" asks for a reduced copy no wider than that on its longest side. The guest
+// display uses it: it shows a shot a few hundred pixels across and was being sent
+// the camera's 8 MB original over the wifi it shares with the guests. The operator
+// console sends no width and still gets the original.
+app.MapGet("/api/photos/{fileName}", (string fileName, int? w, WatchFolderCamera camera) =>
 {
     if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains(".."))
     {
@@ -493,7 +527,21 @@ app.MapGet("/api/photos/{fileName}", (string fileName, WatchFolderCamera camera)
     }
 
     var full = Path.Combine(camera.WatchFolderPath, Path.GetFileName(fileName));
-    return File.Exists(full) ? Results.File(full, "image/jpeg") : Results.NotFound();
+    if (!File.Exists(full))
+    {
+        return Results.NotFound();
+    }
+
+    if (w is > 0)
+    {
+        var preview = PhotoPreviews.Get(full, Math.Clamp(w.Value, 160, 2400));
+        if (preview is not null)
+        {
+            return Results.File(preview, "image/jpeg");
+        }
+    }
+
+    return Results.File(full, "image/jpeg");
 });
 
 // /operator and /display are client-side views of one bundle.

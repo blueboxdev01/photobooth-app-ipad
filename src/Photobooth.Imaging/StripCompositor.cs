@@ -104,6 +104,53 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
     }
 
     /// <summary>
+    /// The strip as it would print, small enough to put on a screen while the
+    /// guest decides whether to keep it.
+    ///
+    /// <para>
+    /// Drawn by the same <see cref="Render"/> as the printed strip and the video,
+    /// so it cannot disagree with either about framing, cropping or art. It is
+    /// rendered on a shrunken canvas from photos decoded at a fraction of their
+    /// size, which is what keeps it well under a second on a 24 MP camera --
+    /// the preview is on screen while the operator waits to press Accept, and a
+    /// preview slower than the operator is no preview.
+    /// </para>
+    /// </summary>
+    /// <returns>A JPEG.</returns>
+    public byte[] ComposePreview(
+        StripTemplate template,
+        IReadOnlyList<string> photoPaths,
+        string templateFolder,
+        int longestEdge = 1200,
+        int jpegQuality = 85)
+    {
+        var scaled = template with { Canvas = Shrink(template.Canvas, longestEdge) };
+
+        var photos = Decode(photoPaths, BiggestSlot(scaled, longestEdge));
+        using var art = LoadArt(scaled, templateFolder, longestEdge);
+
+        try
+        {
+            using var surface = Render(scaled, photos, art, SKAlphaType.Premul);
+            using var image = surface.Snapshot();
+            using var data = image.Encode(SKEncodedImageFormat.Jpeg, jpegQuality);
+            return data.ToArray();
+        }
+        finally
+        {
+            Dispose(photos);
+        }
+    }
+
+    /// <summary>The longest side, in pixels, of the largest slot on this canvas.</summary>
+    private static int BiggestSlot(StripTemplate scaled, int fallback) =>
+        scaled.Slots
+            .Select(slot => slot.ToPixels(scaled.Canvas))
+            .Select(px => Math.Max(px.W, px.H))
+            .DefaultIfEmpty(fallback)
+            .Max();
+
+    /// <summary>
     /// Writes a looping MP4 of the same strip, with the photos moving.
     ///
     /// <para>
@@ -186,11 +233,7 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
         // pixels wide, so there is nothing to gain from unpacking twenty-four
         // megapixels to fill it. JPEG scales natively on the way out of the
         // decoder, which is far cheaper than doing it afterwards.
-        var biggestSlot = scaled.Slots
-            .Select(slot => slot.ToPixels(scaled.Canvas))
-            .Select(px => Math.Max(px.W, px.H))
-            .DefaultIfEmpty(settings.LongestEdge)
-            .Max();
+        var biggestSlot = BiggestSlot(scaled, settings.LongestEdge);
 
         var photos = Decode(photoPaths, biggestSlot);
         using var art = LoadArt(scaled, templateFolder, settings.LongestEdge);

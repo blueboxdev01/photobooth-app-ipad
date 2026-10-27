@@ -32,6 +32,43 @@ public sealed class GuestEndpointTests
     }
 
     /// <summary>
+    /// The strip drawn for review, and the claiming station.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/session/preview.jpg")]
+    [InlineData("/claim")]
+    [InlineData("/api/claim")]
+    public void The_preview_and_the_claiming_station_are_served(string path)
+    {
+        Assert.True(GuestEndpoint.IsGuestPath(path), $"{path} must reach the guest screens");
+    }
+
+    /// <summary>
+    /// The preview lives under <c>/api/session/</c>, which is where arm, accept,
+    /// retake and abort live too. Allowing the one file must not allow the
+    /// prefix, or a stranger on the wifi can end a guest's session.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/session/preview.jpg.bak")]
+    [InlineData("/api/session/preview")]
+    [InlineData("/api/session/previews")]
+    [InlineData("/api/session/preview.jpg/../accept")]
+    [InlineData("/api/session/accept")]
+    [InlineData("/api/session/retake")]
+    [InlineData("/api/session/retake/1")]
+    [InlineData("/api/session/arm")]
+    [InlineData("/api/session/abort")]
+    [InlineData("/api/session/order/reset")]
+    [InlineData("/claimed")]
+    [InlineData("/claim/../operator")]
+    [InlineData("/api/claims")]
+    [InlineData("/api/claim/anything")]
+    public void Allowing_the_preview_and_the_station_opens_nothing_beside_them(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path), $"{path} must NOT be reachable");
+    }
+
+    /// <summary>
     /// The finished session's own files, which is what the guest screen shows
     /// once the shooting is over.
     ///

@@ -89,6 +89,15 @@ public static class GuestEndpoint
         "/hub/session/negotiate",
         "/api/state",
         "/api/delivery",
+
+        // The strip drawn for review. This exact path and nothing else under
+        // /api/session/: that prefix is where arm, accept, retake and abort live,
+        // and the display port must keep refusing every one of them.
+        "/api/session/preview.jpg",
+
+        // The claiming station: its page, and the short list of guests it shows.
+        "/claim",
+        "/api/claim",
         "/api/photos/",
         "/api/settings/display-background",
 

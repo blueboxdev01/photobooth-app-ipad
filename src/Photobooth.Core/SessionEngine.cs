@@ -164,7 +164,7 @@ public sealed class SessionEngine : IDisposable
     /// <summary>Discard the most recent shot and take that pose again.</summary>
     public SessionSnapshot RetakeLast()
     {
-        if (_state is SessionState.Idle or SessionState.Done)
+        if (_state is SessionState.Idle or SessionState.Composing or SessionState.Done)
         {
             return Snapshot;
         }
@@ -204,7 +204,11 @@ public sealed class SessionEngine : IDisposable
         SessionSnapshot snapshot;
         lock (_sync)
         {
-            if (_state is SessionState.Idle or SessionState.Done)
+            // Composing is refused too: the strip is being built from exactly
+            // these photos, and dropping one now (a double-click on Retake right
+            // after Accept) would start a countdown for a session that is
+            // already on its way to the archive.
+            if (_state is SessionState.Idle or SessionState.Composing or SessionState.Done)
             {
                 return new RetakeResult(
                     false, $"There is no session to retake a shot in ({_state}).", Build());

@@ -25,6 +25,8 @@ public sealed class SessionCoordinator : IHostedService
     private readonly SessionArchive _archive;
     private readonly UploadQueue _uploads;
     private readonly SettingsStore _settings;
+    private readonly ClaimBoard _claims;
+    private readonly StripPreviewStore _previews;
     private readonly ILogger<SessionCoordinator> _logger;
 
     /// <summary>
@@ -50,6 +52,8 @@ public sealed class SessionCoordinator : IHostedService
         SessionArchive archive,
         UploadQueue uploads,
         SettingsStore settings,
+        ClaimBoard claims,
+        StripPreviewStore previews,
         ILogger<SessionCoordinator> logger)
     {
         _camera = camera;
@@ -62,6 +66,8 @@ public sealed class SessionCoordinator : IHostedService
         _archive = archive;
         _uploads = uploads;
         _settings = settings;
+        _claims = claims;
+        _previews = previews;
         _logger = logger;
     }
 
@@ -98,6 +104,7 @@ public sealed class SessionCoordinator : IHostedService
         _camera.AcceptFrom = _time.GetUtcNow();
         _token = SessionArchive.NewToken();
         _showing = null;
+        _previews.Clear();
         return _engine.Arm();
     }
 
@@ -117,13 +124,79 @@ public sealed class SessionCoordinator : IHostedService
     {
         Broadcast(snapshot);
 
+        if (snapshot.State == SessionState.ReviewShots)
+        {
+            RequestPreview(snapshot);
+        }
+
         if (snapshot.State == SessionState.Composing)
         {
+            // The token is read here, on the caller's thread, and handed along. The
+            // field is replaced the moment the next guest is armed, and arming
+            // while this guest's strip is still being built is exactly what a
+            // queue does -- read later, it would file these photos under the next
+            // guest's link.
+            var token = _token;
+
             // Off the caller's thread: this decodes several 24 MP JPEGs and must
             // not block the hub callback that just delivered the state change.
-            _ = Task.Run(() => ComposeAsync(snapshot));
+            _ = Task.Run(() => ComposeAsync(snapshot, token));
         }
     }
+
+    /// <summary>
+    /// Draw the strip as it would print, for the guest to look over before the
+    /// operator accepts.
+    ///
+    /// Asked for on every entry to review, not once: a reorder or a retake comes
+    /// back through here with different shots, and the old picture would be wrong.
+    /// Never fatal -- without a preview the screens show the shots themselves.
+    /// </summary>
+    private void RequestPreview(SessionSnapshot snapshot)
+    {
+        var key = PreviewKey(snapshot.Photos);
+        if (!_previews.Want(key))
+        {
+            return;
+        }
+
+        var template = _templates.Current;
+        var photos = snapshot.Photos.Select(p => p.FilePath).ToList();
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var bytes = _compositor.ComposePreview(template, photos, _templates.Folder);
+                if (_previews.Complete(key, bytes) is { } info)
+                {
+                    _ = _hub.Clients.All.SendAsync(SessionHub.PreviewMessage, info)
+                        .ContinueWith(
+                            t => _logger.LogWarning(t.Exception, "Failed to push the strip preview."),
+                            TaskContinuationOptions.OnlyOnFaulted);
+                }
+            }
+            catch (Exception ex)
+            {
+                _previews.Failed(key);
+                _logger.LogWarning(ex, "Could not draw the strip preview; the shots are shown instead.");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Names the shots a preview was drawn from, in strip order. The browsers build
+    /// the same string from the snapshot, so the two agree without either having
+    /// to be told.
+    /// </summary>
+    internal static string PreviewKey(IReadOnlyList<CapturedPhoto> photos) =>
+        string.Join('|', photos.Select(p => p.FileName));
+
+    /// <summary>The preview a screen should be offered right now, if there is one.</summary>
+    public StripPreviewInfo? CurrentPreview() => _previews.Current();
+
+    /// <summary>The guests who have finished and may still be at the claiming station.</summary>
+    public IReadOnlyList<ClaimEntry> RecentFinished() => _claims.Recent();
 
     /// <summary>
     /// Builds the strip and writes the session to disk.
@@ -132,7 +205,7 @@ public sealed class SessionCoordinator : IHostedService
     /// local copy is the source of truth, so a session survives anything the
     /// network or Google can do to it.
     /// </summary>
-    private async Task ComposeAsync(SessionSnapshot snapshot)
+    private async Task ComposeAsync(SessionSnapshot snapshot, string token)
     {
         var temp = Path.Combine(Path.GetTempPath(), $"pb-strip-{Guid.NewGuid():N}.jpg");
         var tempAnimation = Path.Combine(Path.GetTempPath(), $"pb-anim-{Guid.NewGuid():N}.mp4");
@@ -142,21 +215,45 @@ public sealed class SessionCoordinator : IHostedService
             var template = _templates.Current;
             var photos = snapshot.Photos.Select(p => p.FilePath).ToList();
 
-            await Task.Run(() => _compositor.Compose(
+            // Side by side rather than one after the other. They share nothing but
+            // the photos they read, and the video used to start only once the
+            // strip was finished -- so the guest waited for the sum of the two.
+            // AnimateAsync swallows its own failures, so only the strip can fault
+            // here, and WhenAll lets the video finish before that is rethrown.
+            var stripTask = Task.Run(() => _compositor.Compose(
                 template, photos, _templates.Folder, temp));
+            var animationTask = AnimateAsync(template, photos, tempAnimation);
 
-            var animation = await AnimateAsync(template, photos, tempAnimation);
+            await Task.WhenAll(stripTask, animationTask);
+            var animation = await animationTask;
 
             var record = _archive.Save(
-                _token, template, snapshot.Photos, temp,
+                token, template, snapshot.Photos, temp,
                 snapshot.StartedUtc ?? _time.GetUtcNow(),
                 animation);
+
+            await Task.Run(() => WriteThumbnails(record));
 
             // Queued, not awaited. The guest is standing there and the photos are
             // already safe on disk; a venue with no signal must cost them a QR
             // code, not their session.
             record = _uploads.Enqueue(record);
-            _showing = record.FolderName;
+
+            // Only while this guest is still the one on the screen. If the next
+            // guest has been armed since, their screen must not be pointed at
+            // these photos' delivery.
+            if (_engine.Snapshot.State == SessionState.Composing)
+            {
+                _showing = record.FolderName;
+            }
+
+            // Whatever the screens are doing now. The claiming station outlives the
+            // booth screen's idea of "the current guest".
+            _claims.Add(new ClaimEntry(
+                record.Token,
+                record.FolderName,
+                $"/api/sessions/{record.FolderName}/{record.Strip}",
+                _time.GetUtcNow()));
 
             _engine.CompleteComposing(
                 $"/api/sessions/{record.FolderName}/{record.Strip}",
@@ -177,6 +274,40 @@ public sealed class SessionCoordinator : IHostedService
             try { File.Delete(temp); } catch { /* best effort */ }
             try { File.Delete(tempAnimation); } catch { /* best effort */ }
         }
+    }
+
+    /// <summary>
+    /// A small copy of each photo, beside the original, for the guest's page.
+    ///
+    /// Never fatal: a photo without one is simply shown at full size, which is
+    /// slow but correct.
+    /// </summary>
+    private void WriteThumbnails(SessionRecord record)
+    {
+        var folder = _archive.FolderFor(record);
+
+        Parallel.ForEach(record.Photos, photo =>
+        {
+            var thumb = GuestGallery.ThumbName(photo);
+            if (thumb is null)
+            {
+                return;
+            }
+
+            try
+            {
+                Thumbnails.Write(
+                    Path.Combine(folder, photo),
+                    Path.Combine(folder, thumb),
+                    GuestGallery.ThumbnailEdge);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Could not make a thumbnail of {Photo}; the guest page will use the original.",
+                    photo);
+            }
+        });
     }
 
     /// <summary>

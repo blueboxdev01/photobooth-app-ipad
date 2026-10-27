@@ -30,6 +30,27 @@ building.
 It is made by `ffmpeg\ffmpeg.exe`, which ships beside the booth. If that file is
 missing, sessions still work and simply have no video.
 
+### With a separate claiming station
+
+Switch on **Settings → Guest photos over your wifi → Use a separate claiming
+station** and the booth screen stops showing the photos code. After Accept it tells
+the guest to go to the claiming station, with the join-wifi code small beside it for
+whoever is still in the queue.
+
+The claiming station is any screen opened at `/claim` on the guest display's address
+(`https://<booth>:5002/claim`; on a Mac, `tools/mac-display.command`). It shows the
+newest finished guest large, with their strip and photos code, and up to two earlier
+guests smaller below. A guest leaves the screen five minutes after they finish.
+
+It is deliberately separate from the booth screen: that one clears a guest the moment
+the next is started, which is right for the person in front of the camera and wrong for
+the person still scanning.
+
+**Security.** A photos link is the whole of a session's security, and the station's list
+is a page any device on the guest wifi can fetch. So it is kept short on purpose: three
+guests, five minutes. Until now only the guest currently on the booth screen was
+exposed this way.
+
 ---
 
 ## Do guests get our internet?
@@ -93,6 +114,20 @@ The booth does not run the network — it just tells guests how to get onto it.
 The "guest network" one reads backwards and catches people out. On a router,
 *guest* means **isolated from the other devices** — and the booth is a device
 your guests need to reach.
+
+#### Get guests joined before the end of the session
+
+The join-wifi code on the guest screen only appears once a session has finished,
+which makes joining the slowest step of the whole claim. Print the same code on
+a **sign by the queue** (the wifi name and password are in Settings; any QR
+generator will make a `WIFI:S:<name>;T:WPA;P:<password>;;` code). Guests who join
+while they wait then only need the photos code at the end.
+
+Other things that make the router faster for many phones at once:
+
+- **5 GHz**, on a channel nobody else nearby is using, and **WPA2** rather than WPA2/WPA3 mixed mode.
+- **Ethernet** for everything that is not a guest: the booth laptop *and* the guest-display Mac.
+- Nothing else on the router -- no cameras, no spare laptops syncing.
 
 ### 2. Turn it on
 

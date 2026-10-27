@@ -20,6 +20,12 @@ public sealed class SessionHub : Hub
     /// </summary>
     public const string DeliveryMessage = "delivery";
 
+    /// <summary>
+    /// The strip drawn for review. Sent separately from the state because it
+    /// takes a moment to draw and arrives after the shots do.
+    /// </summary>
+    public const string PreviewMessage = "preview";
+
     private readonly SessionEngine _engine;
     private readonly SessionCoordinator _coordinator;
 
@@ -34,6 +40,7 @@ public sealed class SessionHub : Hub
     {
         await Clients.Caller.SendAsync(StateMessage, _engine.Snapshot);
         await Clients.Caller.SendAsync(DeliveryMessage, _coordinator.CurrentDelivery());
+        await Clients.Caller.SendAsync(PreviewMessage, _coordinator.CurrentPreview());
         await base.OnConnectedAsync();
     }
 }

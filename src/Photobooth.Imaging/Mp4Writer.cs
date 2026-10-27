@@ -36,7 +36,12 @@ internal static class Mp4Writer
     private static readonly (string Name, string[] Args)[] Encoders =
     [
         ("libx264", ["-preset", "veryfast", "-crf", "21", "-profile:v", "high"]),
-        ("h264_mf", ["-b:v", "4M"]),
+
+        // 2 Mbit/s is ample for a 333x1000 clip that is three photos held for
+        // 400 ms each, and at the 6 s the clip runs for it is about 1.5 MB. The
+        // 4M this used to ask for roughly doubled the download for no visible
+        // difference. Check a real session's strip.mp4 before lowering it again.
+        ("h264_mf", ["-b:v", "2M"]),
     ];
 
     /// <summary>

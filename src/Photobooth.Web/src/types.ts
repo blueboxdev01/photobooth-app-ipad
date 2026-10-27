@@ -53,6 +53,35 @@ export interface SessionSnapshot {
 }
 
 /**
+ * The strip as it would print, drawn while the guest decides whether to keep it.
+ *
+ * `key` names the shots it was drawn from, in strip order. It is only valid for
+ * a screen showing exactly those shots; see `previewKey`.
+ */
+export interface StripPreview {
+  key: string
+  url: string
+}
+
+/** The same string the booth builds, so a screen can tell if a preview is stale. */
+export const previewKey = (photos: CapturedPhoto[]) => photos.map((p) => p.fileName).join('|')
+
+/** One finished guest at the claiming station. */
+export interface ClaimGuest {
+  token: string
+  stripUrl: string
+  finishedUtc: string
+}
+
+export interface ClaimBoard {
+  /** Whether the booth is serving guests their photos at all. */
+  enabled: boolean
+  ssid: string | null
+  /** Newest first. */
+  guests: ClaimGuest[]
+}
+
+/**
  * Delivery, which is deliberately not part of the session snapshot: an upload
  * outlives the session that produced it, so `sessionFolder` says which session
  * this update is about and the screens match it against the one they are showing.
@@ -78,5 +107,7 @@ export interface CameraInfo {
   watchFolder: string
 }
 
-export const photoUrl = (p: CapturedPhoto) =>
-  `/api/photos/${encodeURIComponent(p.fileName)}`
+// `width` asks the booth for a reduced copy. The guest display passes one: it
+// shows a shot a few hundred pixels across and the original is about 8 MB.
+export const photoUrl = (p: CapturedPhoto, width?: number) =>
+  `/api/photos/${encodeURIComponent(p.fileName)}${width ? `?w=${width}` : ''}`

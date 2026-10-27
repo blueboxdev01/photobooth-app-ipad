@@ -1,4 +1,5 @@
 import { photoUrl } from './types'
+import { previewKey } from './types'
 import type { DeliveryUpdate, SessionSnapshot, SessionState } from './types'
 import { useCountdown, useSession } from './useSession'
 import { backdropStyle, useDisplayTheme } from './useDisplayTheme'
@@ -19,7 +20,7 @@ const POSING_STATES: SessionState[] = ['Idle', 'Countdown', 'Collecting', 'Timed
 
 /** The guest-facing screen. Fullscreen on the external monitor. */
 export function Display() {
-  const { snapshot, delivery, gallery } = useSession()
+  const { snapshot, delivery, gallery, preview } = useSession()
 
   // A booth sits idle between guests, and an iPad that has dimmed itself looks
   // broken. Safari has supported this since 16.4; anything older simply carries
@@ -40,10 +41,24 @@ export function Display() {
   // Reviewing photos is the one time the mirror is not wanted -- guests are
   // looking at what they took, not at themselves.
   if (state === 'ReviewShots') {
+    // The strip as it will print, when the booth has drawn it for exactly these
+    // shots. A reorder or a retake changes the shots and leaves an older preview
+    // behind for a moment; showing that would be showing a picture that is not
+    // the one about to be made, so until the new one arrives the shots are shown.
+    const current = preview && preview.key === previewKey(snapshot.photos) ? preview : null
+
     return (
       <div className="stage" style={backdrop}>
-        <h1>How do these look?</h1>
-        <Filmstrip snapshot={snapshot} large />
+        <h1>How does your strip look?</h1>
+        {current ? (
+          <img className="strip" src={current.url} alt="Your photo strip" />
+        ) : (
+          <>
+            <Filmstrip snapshot={snapshot} large />
+            <p className="shotcount">Putting your strip together…</p>
+          </>
+        )}
+        <p className="shotcount">Want to redo a photo? Tell our team.</p>
       </div>
     )
   }
@@ -67,7 +82,11 @@ export function Display() {
           ) : (
             <Filmstrip snapshot={snapshot} />
           )}
-          <Handover snapshot={snapshot} delivery={delivery} gallery={gallery} />
+          {gallery.enabled && gallery.claimStation ? (
+            <ToTheStation ssid={gallery.ssid} />
+          ) : (
+            <Handover snapshot={snapshot} delivery={delivery} gallery={gallery} />
+          )}
         </div>
       </div>
     )
@@ -78,6 +97,34 @@ export function Display() {
       <Overlay snapshot={snapshot} />
       <Caption snapshot={snapshot} />
       <Filmstrip snapshot={snapshot} />
+    </div>
+  )
+}
+
+/**
+ * Where to go next, when the photos are collected at a separate claiming
+ * station rather than from this screen.
+ *
+ * The join-wifi code is offered here, to the people still in the queue: this is
+ * the screen they are standing next to while they wait, and a guest who has
+ * joined before their turn has one step fewer to do at the end.
+ */
+function ToTheStation({ ssid }: { ssid: string | null }) {
+  return (
+    <div className="handout handout--station">
+      <p className="handover__note handover__note--big">
+        Collect your photos at the <b>claiming station</b>
+      </p>
+      {ssid && (
+        <figure className="handout__step handout__step--small">
+          <img src="/api/guest-gallery/qr?target=join" alt="" />
+          <figcaption>
+            Next in line? Join the wifi now
+            <br />
+            <span className="handout__ssid">{ssid}</span>
+          </figcaption>
+        </figure>
+      )}
     </div>
   )
 }
@@ -235,7 +282,7 @@ function Filmstrip({
         const photo = snapshot.photos[i]
         return (
           <figure key={i} className={photo ? 'shot' : 'shot shot--empty'}>
-            {photo ? <img src={photoUrl(photo)} alt={`Photo ${i + 1}`} /> : <span>{i + 1}</span>}
+            {photo ? <img src={photoUrl(photo, 1280)} alt={`Photo ${i + 1}`} /> : <span>{i + 1}</span>}
           </figure>
         )
       })}

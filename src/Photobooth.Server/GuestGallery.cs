@@ -27,8 +27,28 @@ public static class GuestGallery
     /// <summary>Everything below this lives on the booth's network port.</summary>
     public const string Prefix = "/g/";
 
+    /// <summary>
+    /// Longest side of the copy of each photo the page draws. Tens of kilobytes, against
+    /// the 8 MB original the tile links to.
+    /// </summary>
+    public const int ThumbnailEdge = 640;
+
     public static bool IsGalleryPath(PathString path) =>
         (path.Value ?? string.Empty).StartsWith(Prefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The name of the small copy of <paramref name="photo"/>
+    /// (<c>photo-2.jpg</c> becomes <c>thumb-2.jpg</c>), or null for a name that
+    /// is not one of the session's photos.
+    /// </summary>
+    public static string? ThumbName(string photo)
+    {
+        const string prefix = "photo-";
+
+        return photo.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? $"thumb-{Path.GetFileNameWithoutExtension(photo)[prefix.Length..]}.jpg"
+            : null;
+    }
 
     /// <summary>
     /// Serve a gallery request. Returns false when the path is not ours, so the
@@ -61,7 +81,7 @@ public static class GuestGallery
 
         if (file is null)
         {
-            await PageAsync(context, record);
+            await PageAsync(context, record, folder);
             return true;
         }
 
@@ -85,7 +105,7 @@ public static class GuestGallery
     private static async Task FileAsync(
         HttpContext context, SessionRecord record, string folder, string requested)
     {
-        var allowed = Listed(record)
+        var allowed = Listed(record).Concat(ThumbNames(record))
             .FirstOrDefault(name => string.Equals(name, requested, StringComparison.OrdinalIgnoreCase));
 
         if (allowed is null)
@@ -129,6 +149,11 @@ public static class GuestGallery
         // having.
         context.Response.Headers.ContentDisposition =
             $"inline; filename=\"{Download(record, allowed)}\"";
+
+        // A session's files are written once and never change, so a phone that
+        // has them can keep them. Without this, going back to the page from a
+        // photo downloads the whole lot again.
+        context.Response.Headers.CacheControl = "private, max-age=86400";
 
         await SendFileAsync(context, full);
     }
@@ -261,6 +286,14 @@ public static class GuestGallery
     }
 
     /// <summary>
+    /// The small copies the page may show. Served on request but deliberately
+    /// not in <see cref="Listed"/>: the zip and the tile list are built from
+    /// that, and a guest should not be handed two copies of every photo.
+    /// </summary>
+    private static IEnumerable<string> ThumbNames(SessionRecord record) =>
+        record.Photos.Select(ThumbName).OfType<string>();
+
+    /// <summary>
     /// A name worth having in a camera roll. "photo-1.jpg" from three different
     /// booths collides; the session's own name does not.
     /// </summary>
@@ -296,7 +329,7 @@ public static class GuestGallery
     /// network with no route to the internet, so anything it tried to fetch from
     /// outside would simply hang.
     /// </summary>
-    private static async Task PageAsync(HttpContext context, SessionRecord record)
+    private static async Task PageAsync(HttpContext context, SessionRecord record, string folder)
     {
         var token = WebUtility.HtmlEncode(record.Token);
         var taken = record.CreatedUtc.ToLocalTime().ToString("d MMMM, HH:mm");
@@ -324,9 +357,23 @@ public static class GuestGallery
             // link and opens the file itself. That is deliberate: the full-screen
             // player is the one with iOS's share button, and Save Video there is
             // what puts it in Photos, from where it can be posted.
+            //
+            // Nothing here pulls more than it has to. The video fetches its
+            // metadata and shows the strip until it plays, rather than racing the
+            // photos for the same wifi. A photo tile draws its small copy and
+            // loads it as it scrolls into view; the tile still links to the
+            // original, so the camera roll gets the full-size file. A session
+            // taken before the small copies existed has none, and falls back to
+            // the original.
+            var thumb = ThumbName(name);
+            var thumbHref = thumb is not null && File.Exists(Path.Combine(folder, thumb))
+                ? $"{Prefix}{Uri.EscapeDataString(record.Token)}/{Uri.EscapeDataString(thumb)}"
+                : href;
+            var stripHref = $"{Prefix}{Uri.EscapeDataString(record.Token)}/{Uri.EscapeDataString(record.Strip)}";
+
             var media = name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
-                ? $"""<video src="{href}" autoplay loop muted playsinline preload="auto"></video>"""
-                : $"""<img src="{href}" alt="">""";
+                ? $"""<video src="{href}" poster="{stripHref}" autoplay loop muted playsinline preload="metadata"></video>"""
+                : $"""<img src="{thumbHref}" alt="" loading="lazy" decoding="async">""";
 
             return $"""
                       <a class="tile{wide}" href="{href}">

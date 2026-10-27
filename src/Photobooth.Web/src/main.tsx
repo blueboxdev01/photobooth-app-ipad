@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/plus-jakarta-sans'
 import '@fontsource-variable/jetbrains-mono'
 
+import { Claim } from './Claim'
 import { Diagnostics } from './Diagnostics'
 import { Display } from './Display'
 import { Gallery } from './Gallery'
@@ -19,6 +20,7 @@ import './styles.css'
 const path = window.location.pathname.replace(/\/+$/, '')
 const view =
   path === '/display' ? <Display />
+  : path === '/claim' ? <Claim />
   : path === '/diagnostics' ? <Diagnostics />
   : path === '/templates' ? <Templates />
   : path === '/gallery' ? <Gallery />

@@ -655,6 +655,40 @@ a.button, .btn.button {
   margin: 0; font-size: clamp(18px, 2.4vw, 28px); color: rgba(255, 255, 255, .78);
   max-width: 14em; text-align: center;
 }
+/* Sending the guest on to the claiming station: one big line, with the join code
+   small beside it for whoever is still queuing. */
+.handout--station { align-items: center; flex-wrap: wrap; justify-content: center; }
+.handover__note--big { font-size: clamp(24px, 3.6vw, 44px); color: #fff; max-width: 12em; }
+.handout__step--small img { width: min(18vh, 170px); padding: 10px; }
+.handout__step--small figcaption { font-size: clamp(13px, 1.4vw, 17px); }
+
+/* The claiming station. The newest guest is large; anyone who has not collected
+   yet is kept below, smaller, so two guests finishing close together do not
+   push each other off the screen. */
+.stage--claim { gap: 18px; }
+.claim__main {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(20px, 5vw, 64px); flex-wrap: wrap;
+}
+.claim__main .strip { height: min(54vh, 640px); }
+.claim__earlier { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.claim__earlier .muted { margin: 0; font-size: 15px; }
+.claim__row { display: flex; gap: 18px; }
+.claim__small { display: flex; align-items: center; gap: 10px; }
+.stage .claim__small .strip { height: min(16vh, 150px); }
+.claim__qr {
+  width: min(16vh, 150px); height: auto; background: #fff; padding: 8px;
+  border-radius: 8px; image-rendering: pixelated;
+}
+.claim__join { margin: 0; display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, .8); font-size: 15px; }
+.claim__join img {
+  width: 84px; height: auto; background: #fff; padding: 6px; border-radius: 8px;
+  image-rendering: pixelated;
+}
+.claim__warn {
+  margin: 0; padding: 6px 14px; border-radius: 999px; font-size: 14px;
+  background: rgba(255, 255, 255, .12); color: #ffd7a8;
+}
 .qr { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 /* White plate behind the code: guest backdrops can be any colour, and a QR on a
    dark or busy ground is the classic reason a phone will not read it. */

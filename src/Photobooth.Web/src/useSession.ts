@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr'
 import type { HubConnection } from '@microsoft/signalr'
-import type { CameraInfo, DeliveryUpdate, SessionSnapshot } from './types'
+import type { CameraInfo, DeliveryUpdate, SessionSnapshot, StripPreview } from './types'
 
 /**
  * Subscribes both windows to one authoritative session state.
@@ -16,10 +16,19 @@ export function useSession() {
   const [camera, setCamera] = useState<CameraInfo | null>(null)
   // Whether guests take their photos from the booth itself, and the network they
   // join to do it.
-  const [gallery, setGallery] = useState<{ enabled: boolean; ssid: string | null }>({
+  const [gallery, setGallery] = useState<{
+    enabled: boolean
+    ssid: string | null
+    /** Guests collect at a separate claiming station, not from this screen. */
+    claimStation: boolean
+  }>({
     enabled: false,
     ssid: null,
+    claimStation: false,
   })
+  // The strip drawn for review. Arrives after the shots do, so it is its own piece
+  // of state and the screen decides whether it still matches.
+  const [preview, setPreview] = useState<StripPreview | null>(null)
   const [connected, setConnected] = useState(false)
   const connectionRef = useRef<HubConnection | null>(null)
 
@@ -32,6 +41,7 @@ export function useSession() {
 
     connection.on('state', (s: SessionSnapshot) => setSnapshot(s))
     connection.on('delivery', (d: DeliveryUpdate) => setDelivery(d))
+    connection.on('preview', (p: StripPreview | null) => setPreview(p))
     connection.onreconnected(() => setConnected(true))
     connection.onreconnecting(() => setConnected(false))
     connection.onclose(() => setConnected(false))
@@ -66,6 +76,7 @@ export function useSession() {
           // otherwise sit stale until the next session.
           setDelivery(body.delivery)
           if (body.guestGallery) setGallery(body.guestGallery)
+          setPreview(body.preview ?? null)
           if (!connectionRef.current) setSnapshot(body.session)
         }
       } catch {
@@ -80,7 +91,7 @@ export function useSession() {
     }
   }, [])
 
-  return { snapshot, delivery, camera, connected, gallery }
+  return { snapshot, delivery, camera, connected, gallery, preview }
 }
 
 export async function command(name: string, body?: unknown) {

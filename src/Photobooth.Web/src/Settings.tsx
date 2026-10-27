@@ -39,6 +39,8 @@ interface SettingsResponse {
   guestGallery: {
     enabled: boolean
     ssid: string | null
+    /** Photos are collected at a separate claiming station (`/claim`). */
+    claimStation: boolean
     hasPassword: boolean
     /** The address guests are actually being sent to right now. */
     photosHost: string
@@ -809,6 +811,29 @@ function GuestGallery({
               or the code will scan and then never load.
             </p>
           ) : null}
+
+          <div className="controls">
+            <button className="btn" disabled={busy}
+                    onClick={() => void save(
+                      { claimStationEnabled: !g.claimStation },
+                      g.claimStation
+                        ? 'The booth screen will show guests their photos code.'
+                        : 'The booth screen will send guests to the claiming station.')}>
+              {g.claimStation
+                ? 'Show the photos code on this screen again'
+                : 'Use a separate claiming station'}
+            </button>
+          </div>
+
+          <p className="muted small">
+            {g.claimStation
+              ? <>The booth screen sends finished guests to the claiming station, which
+                  is any screen opened at <code>/claim</code> (same address and port as
+                  the guest display). It keeps showing a guest for five minutes after
+                  they finish, even while the next one is posing.</>
+              : <>Off: the guest screen shows both codes itself at the end of a session.
+                  Turn this on if guests collect from a second screen.</>}
+          </p>
 
           <dl className="facts">
             <dt>Guests reach</dt>

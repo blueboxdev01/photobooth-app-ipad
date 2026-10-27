@@ -204,6 +204,132 @@ public sealed class GuestGalleryTests : IDisposable
         public bool AllowSynchronousIO { get; set; }
     }
 
+    // --- small copies of the photos ------------------------------------------
+
+    /// <summary>What the booth writes beside a photo once it has made a small copy.</summary>
+    private void AddThumbnails(SessionRecord record)
+    {
+        var folder = _archive.FolderFor(record);
+        foreach (var photo in record.Photos)
+        {
+            File.WriteAllText(
+                Path.Combine(folder, GuestGallery.ThumbName(photo)!), "small " + photo);
+        }
+    }
+
+    [Fact]
+    public void A_thumbnail_is_named_after_its_photo()
+    {
+        Assert.Equal("thumb-1.jpg", GuestGallery.ThumbName("photo-1.jpg"));
+        Assert.Equal("thumb-12.jpg", GuestGallery.ThumbName("photo-12.jpeg"));
+        Assert.Null(GuestGallery.ThumbName("strip.jpg"));
+    }
+
+    [Fact]
+    public async Task The_page_draws_the_small_copy_and_links_to_the_original()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+        AddThumbnails(record);
+
+        var (_, body) = await GetAsync($"/g/{record.Token}");
+        var html = Text(body);
+
+        // Drawn from the small copy, and loaded as it scrolls into view.
+        Assert.Contains($"""<img src="/g/{record.Token}/thumb-1.jpg" alt="" loading="lazy" """, html);
+
+        // The link a guest taps to save is still the full-size photo.
+        Assert.Contains($"""href="/g/{record.Token}/photo-1.jpg" """.TrimEnd(), html);
+        Assert.DoesNotContain($"""<img src="/g/{record.Token}/photo-1.jpg" """, html);
+    }
+
+    /// <summary>
+    /// Sessions taken before the small copies existed have none, and a missing
+    /// one must not become a broken picture.
+    /// </summary>
+    [Fact]
+    public async Task A_session_without_small_copies_still_shows_its_photos()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+
+        var (_, body) = await GetAsync($"/g/{record.Token}");
+        var html = Text(body);
+
+        Assert.DoesNotContain("thumb-", html);
+        Assert.Contains($"""<img src="/g/{record.Token}/photo-1.jpg" """, html);
+    }
+
+    [Fact]
+    public async Task A_small_copy_is_served_as_a_picture()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+        AddThumbnails(record);
+
+        var context = Request($"/g/{record.Token}/thumb-2.jpg");
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        Assert.Equal(200, context.Response.StatusCode);
+        Assert.Equal("image/jpeg", context.Response.ContentType);
+    }
+
+    /// <summary>
+    /// The allowlist is still the record's own list: a thumbnail name for a photo
+    /// the session does not have reaches nothing, and gets the same answer as
+    /// any other unknown file.
+    /// </summary>
+    [Fact]
+    public async Task A_small_copy_of_a_photo_the_session_does_not_have_is_not_found()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+        AddThumbnails(record);
+        File.WriteAllText(Path.Combine(_archive.FolderFor(record), "thumb-9.jpg"), "stray");
+
+        var (status, _) = await GetAsync($"/g/{record.Token}/thumb-9.jpg");
+
+        Assert.Equal(404, status);
+    }
+
+    [Fact]
+    public async Task The_zip_does_not_carry_two_copies_of_every_photo()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+        AddThumbnails(record);
+
+        var (_, body) = await GetAsync($"/g/{record.Token}/all.zip");
+
+        using var zip = new ZipArchive(new MemoryStream(body), ZipArchiveMode.Read);
+        Assert.DoesNotContain(zip.Entries, e => e.Name.Contains("thumb-"));
+    }
+
+    /// <summary>
+    /// Files in a session are written once. Without this a phone downloads the
+    /// whole page again every time the guest comes back to it from a photo.
+    /// </summary>
+    [Fact]
+    public async Task Files_may_be_kept_by_the_phone()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow);
+
+        var context = Request($"/g/{record.Token}/{record.Photos[0]}");
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        var cache = context.Response.Headers.CacheControl.ToString();
+        Assert.Contains("max-age=", cache);
+        Assert.Contains("private", cache);
+    }
+
+    [Fact]
+    public async Task The_video_waits_for_its_metadata_and_shows_the_strip_meanwhile()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var (_, body) = await GetAsync($"/g/{record.Token}");
+        var html = Text(body);
+
+        Assert.Contains("preload=\"metadata\"", html);
+        Assert.Contains($"poster=\"/g/{record.Token}/{record.Strip}\"", html);
+        Assert.DoesNotContain("preload=\"auto\"", html);
+    }
+
     // --- the animation --------------------------------------------------------
 
     [Fact]

@@ -226,6 +226,26 @@ public class SessionRetakeTests
         Assert.Equal(SessionState.Done, result.Snapshot.State);
     }
 
+    /// <summary>
+    /// A double-click on Retake right after Accept used to drop a photo and start
+    /// a countdown for a session whose strip was already being built from it.
+    /// </summary>
+    [Fact]
+    public void Retaking_is_refused_while_the_strip_is_being_built()
+    {
+        var (engine, _) = Reviewing();
+        engine.Accept();
+        Assert.Equal(SessionState.Composing, engine.Snapshot.State);
+
+        var result = engine.Retake(1);
+        var last = engine.RetakeLast();
+
+        Assert.False(result.Ok);
+        Assert.Equal(SessionState.Composing, result.Snapshot.State);
+        Assert.Equal(SessionState.Composing, last.State);
+        Assert.Equal(Shots, engine.Snapshot.Photos.Count);
+    }
+
     // --- the old behaviour still holds --------------------------------------
 
     /// <summary>

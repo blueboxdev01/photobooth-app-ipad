@@ -190,3 +190,45 @@ The fallback costs nothing: plug in a monitor and open
 | A second iPad | Steps 2 and 3 on that iPad |
 | New laptop | New authority, so every iPad repeats step 2. The fingerprint on the Settings page will have changed |
 | `data/` deleted | Same as a new laptop |
+
+---
+
+## Using a MacBook as the guest display
+
+A MacBook works as the guest screen in place of the iPad, or beside it. It is
+**only a screen**: the booth, the camera ingest, the QR codes and every photo
+stay on the Windows laptop, and the Mac opens the same page the iPad does. Nothing
+is installed on the Mac but a certificate.
+
+**Network.** Put the Mac on the router by **Ethernet** (a USB-C adapter) if it
+has one to spare. It then does not share the wifi airtime the guests are
+downloading their photos over. If it has to use wifi, join the same router and
+no other network.
+
+**Trust the booth once** (the same job as steps 2 above):
+
+1. On the Mac, open `http://<booth laptop's address>:5001/cert` in Safari or
+   Chrome. The address is the one under **This machine** on the Settings page.
+2. Open the downloaded `photobooth-ca.crt`. **Keychain Access** adds it to
+   *login*.
+3. Double-click **Photobooth booth authority** in Keychain Access, expand
+   **Trust**, and set **When using this certificate** to **Always Trust**.
+   Close the window and enter the Mac's password.
+
+Then open `https://<booth laptop's name>.local:5002/display`, or the IP form
+if `.local` does not resolve. You should get the padlock and **Step in and
+smile**.
+
+**Keep it awake.** The page holds a wake lock, which a Mac's browser honours.
+For a belt and braces backstop, **System Settings → Lock Screen** set to never
+turn the display off on power, or run `caffeinate -d` in Terminal.
+
+**Fullscreen.** Safari: View → Enter Full Screen. Chrome: `Ctrl+Cmd+F`, or
+*Window → Create Shortcut → Open as window* for a page with no browser chrome.
+
+A tablet can be added or taken away at any time. Each one repeats its own trust
+step and nothing on the booth laptop changes.
+
+> The display now asks the booth for a **reduced copy** of each shot rather than
+> the 8 MB original, so a Mac or iPad on wifi is no longer downloading
+> full-resolution photos for every countdown.
