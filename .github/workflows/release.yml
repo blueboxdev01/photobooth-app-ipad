@@ -188,6 +188,8 @@ jobs:
           Copy-Item docs/QA-CHECKLIST.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/IPAD-DISPLAY.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/GUEST-PHOTOS.md artifacts/publish/ -ErrorAction SilentlyContinue
+          Copy-Item docs/EVENT-SETUP.md artifacts/publish/ -ErrorAction SilentlyContinue
+          Copy-Item docs/WEDNESDAY-TEST.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/TESTING-GUEST-PHOTOS.md artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/Photobooth-*-Test-Guide.pdf artifacts/publish/ -ErrorAction SilentlyContinue
           Copy-Item docs/Photobooth-Event-Runbook.pdf artifacts/publish/ -ErrorAction SilentlyContinue

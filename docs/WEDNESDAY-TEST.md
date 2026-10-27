@@ -25,104 +25,18 @@ next guest is already posing, and shows up to three at a time, newest largest.
 
 ---
 
-## A. Windows laptop (do this first, tonight if you can)
+## Set everything up first
 
-**Install**
+Follow **[EVENT-SETUP.md](EVENT-SETUP.md)** end to end: the router, the camera, the Windows
+laptop (from the v0.18.0 ZIP), the booth settings, the iPad, the MacBook and the queue sign.
+Its section 10 is the ten-minute check to pass before you start the test below.
 
-| | |
-|---|---|
-| **Canon EOS Utility** | The camera is tethered through it; the booth app never touches the camera |
-| **The booth app** | Either of the two below |
-| **ffmpeg** | Only if building from source. A release ZIP already carries `ffmpeg\ffmpeg.exe` |
-
-Getting the app, in order of preference:
-
-1. **From source (has this week's changes, never yet compiled).** Install the .NET 10
-   SDK and Node 22, then:
-   ```
-   cd src\Photobooth.Web && npm ci && npm run build && cd ..\..
-   dotnet test
-   dotnet build
-   ```
-   **Run `dotnet test` first.** The thumbnail, strip-preview and claiming-station
-   changes were written on a Mac with no .NET and have only been type-checked on the web
-   side. If anything fails, use option 2. For video, put an ffmpeg build on the PATH.
-2. **Last release, v0.17.0.** Download the ZIP from the repo's Releases page, unzip, run
-   `Photobooth.Server.exe`. It has no strip preview and no claiming-station page; see
-   *If the new build is not ready* below.
-
-Not a Windows "N" edition: it lacks the H.264 encoder and the video will not be made.
-
-**Windows settings**
-
-- Plug the laptop into the router's **LAN** port by cable.
-- Windows Firewall: when the app first opens its ports, allow it on **Private networks**.
-  Set the router connection's network profile to **Private**.
-- Power plan: never sleep on mains, screen off never.
-- Do **not** turn on Mobile Hotspot (it shares the laptop's internet with guests).
-- Optional: exclude the booth's `data\` and watch folders from Defender real-time scanning.
-
-**Folders.** Two different ones: the **watch folder** (where EOS Utility saves) and
-the **output folder** (where sessions are filed). Set both in Settings, press **Check**.
-
-## B. Router
-
-- Mode: **Router**. **WAN port empty.**
-- A **5 GHz** SSID, **WPA2**, a simple password. Write both down.
-- **Guest network off**, **AP / client isolation off.**
-- **DHCP reservation** for the Windows laptop (note its IP, e.g. `192.168.8.100`).
-- Optional but better: reserve addresses for the MacBook and iPad too.
-
-## C. Booth app settings (on the Windows laptop, `http://localhost:5000/operator`)
-
-1. **Settings → Guest photos over your wifi**: switch on, enter the **exact** SSID and
-   password, and set **Guests reach the booth at** to the laptop's router address.
-2. Same section: press **Use a separate claiming station**. This is what makes the iPad
-   send guests to the MacBook instead of showing the photos code itself.
-3. **Settings → Guest display**: switch on **Serve the display**, then **restart the booth**.
-4. Confirm **Looping video** is on and `ffmpeg` is found (diagnostics page).
-5. Pick the template and photo count you will actually use.
-
-## D. The iPad (the booth screen)
-
-Follow [IPAD-DISPLAY.md](IPAD-DISPLAY.md): trust the booth certificate, then open
-`https://<laptop>.local:5002/display` (or the IP). Add to Home Screen, Guided Access, and
-Auto-Lock to Never.
-
-Stand it where the guest can see it **from centre stage**, next to the camera. During the
-shots it shows only the countdown; after the last shot it shows the strip.
-
-## E. MacBook Neo (the claiming station)
-
-It has Wi-Fi only, so join the router's wifi. If a USB-C Ethernet adapter turns up, use it
-instead and leave the radio to the guests.
-
-1. **Join the router's wifi** (it will warn there is no internet; stay connected).
-2. **Trust the booth, once.** In Safari or Chrome open `http://<laptop address>:5001/cert`,
-   open the downloaded `photobooth-ca.crt`, then in **Keychain Access** double-click
-   **Photobooth booth authority → Trust → When using this certificate: Always Trust.**
-3. **Stop it sleeping.** **System Settings → Lock Screen**: turn display off **Never** while
-   on power, and keep it plugged in. (It currently turns the display off after 3 minutes.)
-   The launcher below also holds it awake while it runs.
-4. **Start the station:** double-click `tools/mac-display.command` (first run asks for the
-   laptop's address). It checks the network, then the certificate, then opens
-   `https://<laptop>:5002/claim` fullscreen in Chrome. Quit with **Cmd+Q**.
-
-It shows *"Your photos will appear here"* until the first guest has been accepted.
-
-Put it where a guest walks **after** the iPad, out of the line of the camera, with room for
-two people to stand and scan.
-
-## F. The queue sign
-
-Print the join-wifi QR (the booth shows one on the iPad and the MacBook; or make one from
-`WIFI:S:<name>;T:WPA;P:<password>;;` with any QR generator) and put the wifi name and
-password in text next to it. Add: *"Your phone will say there's no internet. That's normal
-— stay connected."* Android phones are the ones that give up otherwise.
+The ZIP is here:
+<https://github.com/blueboxdev01/photobooth-app-ipad/releases/download/v0.18.0/photobooth-v0.18.0-win-x64.zip>
 
 ---
 
-## G. The test run
+## The test run
 
 Do these in order. Stop at the first failure and note it.
 
