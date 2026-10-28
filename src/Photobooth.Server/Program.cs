@@ -186,6 +186,8 @@ builder.Services.AddSingleton<ITemplateProvider>(
     sp => sp.GetRequiredService<FileTemplateProvider>());
 builder.Services.AddSingleton<StripCompositor>();
 builder.Services.AddSingleton<SessionArchive>();
+builder.Services.AddSingleton<GuestNumbers>();
+builder.Services.AddSingleton<PickupBoard>();
 builder.Services.AddSingleton<SessionEngine>();
 builder.Services.AddSingleton<DiagnosticsService>();
 builder.Services.AddSingleton<ClaimBoard>();
@@ -263,6 +265,7 @@ app.MapGet("/api/state", (
             enabled = settings.Current.GuestGalleryEnabled ?? false,
             ssid = settings.Current.GuestWifiSsid,
             claimStation = settings.Current.ClaimStationEnabled ?? false,
+            claimingStationOnly = settings.Current.ClaimingStationOnly ?? false,
         },
 
         build = new { version = DiagnosticsService.Version },
@@ -404,7 +407,12 @@ app.MapGet("/api/diagnostics/bundle", (DiagnosticsService d, IConfiguration conf
     return Results.File(bytes, "application/zip", name);
 });
 
-app.MapPost("/api/session/arm", (SessionCoordinator c) => Results.Ok(c.Arm()));
+// A claiming station has no camera. Refused here as well as hidden in the console,
+// so a stray request cannot start a session that nothing will ever shoot.
+app.MapPost("/api/session/arm", (SessionCoordinator c, SettingsStore settings) =>
+    settings.Current.ClaimingStationOnly == true
+        ? Results.Conflict(new { error = "This computer is the claiming station only." })
+        : Results.Ok(c.Arm()));
 app.MapPost("/api/session/retake", (SessionEngine e) => Results.Ok(e.RetakeLast()));
 
 // Retake one pose out of the middle of a strip, leaving the rest where they are.
@@ -490,6 +498,21 @@ app.MapGet("/api/sessions", (SessionArchive archive) => Results.Ok(new
     diskIsLow = archive.DiskIsLow(),
     sessions = archive.All().Take(50),
 }));
+
+// The claiming station's grid: every guest for one event day, by number. Operator
+// port only -- it lists every guest's token, so it is deliberately not on the guest
+// allowlist.
+app.MapGet("/api/pickup", (string? day, PickupBoard board, SettingsStore settings) =>
+{
+    var result = board.For(day);
+    return Results.Ok(new
+    {
+        result.Day,
+        result.Days,
+        ssid = settings.Current.GuestWifiSsid,
+        guests = result.Guests,
+    });
+});
 
 // The guest's QR, rendered from the link recorded for that session. Generated
 // here rather than in the browser so the code cannot drift from the URL, or fail

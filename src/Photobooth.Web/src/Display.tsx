@@ -82,7 +82,9 @@ export function Display() {
           ) : (
             <Filmstrip snapshot={snapshot} />
           )}
-          {gallery.enabled && gallery.claimStation ? (
+          {snapshot.number !== null ? (
+            <YourNumber number={snapshot.number} />
+          ) : gallery.enabled && gallery.claimStation ? (
             <ToTheStation ssid={gallery.ssid} />
           ) : (
             <Handover snapshot={snapshot} delivery={delivery} gallery={gallery} />
@@ -97,6 +99,25 @@ export function Display() {
       <Overlay snapshot={snapshot} />
       <Caption snapshot={snapshot} />
       <Filmstrip snapshot={snapshot} />
+    </div>
+  )
+}
+
+/**
+ * The guest's pickup number, big enough to read from across the booth and to
+ * remember: it is all they need to say at the claiming station.
+ *
+ * There is deliberately no QR here. The claiming station shows it to the guest
+ * once the operator has found them by this number.
+ */
+function YourNumber({ number }: { number: number }) {
+  return (
+    <div className="yournumber">
+      <p className="yournumber__label">Your number</p>
+      <p className="yournumber__value" aria-label={`Your number is ${number}`}>{number}</p>
+      <p className="yournumber__next">
+        Tell this number at the <b>claiming station</b> to get your photos
+      </p>
     </div>
   )
 }

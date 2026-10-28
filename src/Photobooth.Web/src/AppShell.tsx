@@ -4,6 +4,8 @@ import { useTheme, type ThemeChoice } from './useTheme'
 interface BoothStatus {
   cameraStatus: string
   version: string
+  /** This computer only claims photos; it has no camera and starts no sessions. */
+  claimingStationOnly: boolean
 }
 
 interface Folders {
@@ -18,6 +20,7 @@ interface Folders {
  */
 const NAV = [
   { href: '/operator', label: 'Start Session', hint: 'Run the booth', icon: 'session' },
+  { href: '/pickup', label: 'Claiming Station', hint: 'Find a guest by number', icon: 'pickup' },
   { href: '/gallery', label: 'Guest Gallery', hint: 'Find a guest’s photos', icon: 'gallery' },
   { href: '/templates', label: 'Templates', hint: 'Frame and layout', icon: 'templates' },
 ] as const
@@ -63,6 +66,7 @@ export function AppShell({
           setStatus({
             cameraStatus: body.camera?.status ?? 'Unknown',
             version: body.build?.version ?? '',
+            claimingStationOnly: body.guestGallery?.claimingStationOnly ?? false,
           })
         }
       } catch {
@@ -109,7 +113,7 @@ export function AppShell({
         <nav className="rail__nav" aria-label="Sections">
           <p className="rail__group">Main</p>
 
-          {NAV.map((item) => (
+          {NAV.filter((item) => !(status?.claimingStationOnly && item.href === '/operator')).map((item) => (
             <NavItem key={item.href} item={item} current={page} />
           ))}
         </nav>
@@ -128,13 +132,22 @@ export function AppShell({
 
       <main className="work">
         <header className="topbar">
-          <span className={`camerapill camerapill--${camera}`}>
-            <span className="dot" aria-hidden="true" />
-            Camera {camera}
-          </span>
+          {status?.claimingStationOnly ? (
+            <span className="camerapill camerapill--Ready">
+              <span className="dot" aria-hidden="true" />
+              Claiming station
+            </span>
+          ) : (
+            <span className={`camerapill camerapill--${camera}`}>
+              <span className="dot" aria-hidden="true" />
+              Camera {camera}
+            </span>
+          )}
 
           <div className="topbar__folders">
-            <FolderChip label="Watch folder" path={folders?.watchFolder} icon="watch" />
+            {!status?.claimingStationOnly && (
+              <FolderChip label="Watch folder" path={folders?.watchFolder} icon="watch" />
+            )}
             <FolderChip label="Destination folder" path={folders?.outputFolder} icon="folder" />
           </div>
         </header>
@@ -194,6 +207,9 @@ function Icon({ name }: { name: string }) {
         <circle cx="12" cy="12" r="8.2" />
         <circle cx="12" cy="12" r="3.4" />
       </>
+    ),
+    pickup: (
+      <path d="M9 4L7.4 20M16.6 4L15 20M4.6 9h15.6M3.8 15h15.6" />
     ),
     gallery: (
       <>

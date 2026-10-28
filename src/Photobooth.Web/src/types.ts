@@ -50,6 +50,11 @@ export interface SessionSnapshot {
   /** Set once the strip is composed and archived. */
   stripUrl: string | null
   sessionFolder: string | null
+  /**
+   * The guest's pickup number, once accepted, when the booth hands over by
+   * number. What the guest says at the claiming station.
+   */
+  number: number | null
 }
 
 /**

@@ -51,7 +51,13 @@ public sealed record SessionSnapshot(
     /// from this and count the same seconds regardless.
     /// </para>
     /// </summary>
-    DateTimeOffset? ServerNowUtc = null)
+    DateTimeOffset? ServerNowUtc = null,
+    /// <summary>
+    /// The guest's pickup number, once the session is accepted and the booth is
+    /// handing over by number. It is what the guest says at the claiming station.
+    /// Null before then, and always null when handing over by QR.
+    /// </summary>
+    int? Number = null)
 {
     public int CapturedCount => Photos.Count;
 

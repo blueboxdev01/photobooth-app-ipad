@@ -26,6 +26,7 @@ public sealed class SessionCoordinator : IHostedService
     private readonly UploadQueue _uploads;
     private readonly SettingsStore _settings;
     private readonly ClaimBoard _claims;
+    private readonly GuestNumbers _numbers;
     private readonly StripPreviewStore _previews;
     private readonly ILogger<SessionCoordinator> _logger;
 
@@ -53,6 +54,7 @@ public sealed class SessionCoordinator : IHostedService
         UploadQueue uploads,
         SettingsStore settings,
         ClaimBoard claims,
+        GuestNumbers numbers,
         StripPreviewStore previews,
         ILogger<SessionCoordinator> logger)
     {
@@ -67,12 +69,22 @@ public sealed class SessionCoordinator : IHostedService
         _uploads = uploads;
         _settings = settings;
         _claims = claims;
+        _numbers = numbers;
         _previews = previews;
         _logger = logger;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // A claiming station only reads the sessions folder the booth computer
+        // fills. Starting the camera here would create a watch folder, and
+        // would let an operator start a session on the wrong machine.
+        if (_settings.Current.ClaimingStationOnly == true)
+        {
+            _logger.LogInformation("Claiming station only: the camera is not started.");
+            return;
+        }
+
         _camera.PhotoArrived += OnPhotoArrived;
         _camera.StatusChanged += OnCameraStatus;
         _camera.IngestDecision += OnIngestDecision;
@@ -86,6 +98,11 @@ public sealed class SessionCoordinator : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        if (_settings.Current.ClaimingStationOnly == true)
+        {
+            return;
+        }
+
         _camera.PhotoArrived -= OnPhotoArrived;
         _camera.StatusChanged -= OnCameraStatus;
         _camera.IngestDecision -= OnIngestDecision;
@@ -138,9 +155,15 @@ public sealed class SessionCoordinator : IHostedService
             // guest's link.
             var token = _token;
 
+            // Taken now, once, for the same reason: this is the moment the guest
+            // is accepted, and a retried compose must not hand out a second one.
+            var number = _settings.Current.PickupByNumber == true
+                ? _numbers.Next(snapshot.StartedUtc ?? _time.GetUtcNow())
+                : (int?)null;
+
             // Off the caller's thread: this decodes several 24 MP JPEGs and must
             // not block the hub callback that just delivered the state change.
-            _ = Task.Run(() => ComposeAsync(snapshot, token));
+            _ = Task.Run(() => ComposeAsync(snapshot, token, number));
         }
     }
 
@@ -205,7 +228,7 @@ public sealed class SessionCoordinator : IHostedService
     /// local copy is the source of truth, so a session survives anything the
     /// network or Google can do to it.
     /// </summary>
-    private async Task ComposeAsync(SessionSnapshot snapshot, string token)
+    private async Task ComposeAsync(SessionSnapshot snapshot, string token, int? number)
     {
         var temp = Path.Combine(Path.GetTempPath(), $"pb-strip-{Guid.NewGuid():N}.jpg");
         var tempAnimation = Path.Combine(Path.GetTempPath(), $"pb-anim-{Guid.NewGuid():N}.mp4");
@@ -220,9 +243,11 @@ public sealed class SessionCoordinator : IHostedService
             // strip was finished -- so the guest waited for the sum of the two.
             // AnimateAsync swallows its own failures, so only the strip can fault
             // here, and WhenAll lets the video finish before that is rethrown.
+            var stamp = number is { } n ? $"No. {n}" : null;
+
             var stripTask = Task.Run(() => _compositor.Compose(
-                template, photos, _templates.Folder, temp));
-            var animationTask = AnimateAsync(template, photos, tempAnimation);
+                template, photos, _templates.Folder, temp, stamp: stamp));
+            var animationTask = AnimateAsync(template, photos, tempAnimation, stamp);
 
             await Task.WhenAll(stripTask, animationTask);
             var animation = await animationTask;
@@ -230,7 +255,8 @@ public sealed class SessionCoordinator : IHostedService
             var record = _archive.Save(
                 token, template, snapshot.Photos, temp,
                 snapshot.StartedUtc ?? _time.GetUtcNow(),
-                animation);
+                animation,
+                number);
 
             await Task.Run(() => WriteThumbnails(record));
 
@@ -258,7 +284,8 @@ public sealed class SessionCoordinator : IHostedService
             _engine.CompleteComposing(
                 $"/api/sessions/{record.FolderName}/{record.Strip}",
                 record.FolderName,
-                record.Token);
+                record.Token,
+                record.Number);
 
             BroadcastDelivery(record);
         }
@@ -321,7 +348,8 @@ public sealed class SessionCoordinator : IHostedService
     /// </para>
     /// </summary>
     private async Task<string?> AnimateAsync(
-        StripTemplate template, IReadOnlyList<string> photos, string outputPath)
+        StripTemplate template, IReadOnlyList<string> photos, string outputPath,
+        string? stamp = null)
     {
         // Read per session rather than cached, so switching it off in Setup takes
         // effect on the very next guest.
@@ -333,7 +361,7 @@ public sealed class SessionCoordinator : IHostedService
         try
         {
             await Task.Run(() => _compositor.ComposeAnimation(
-                template, photos, _templates.Folder, outputPath));
+                template, photos, _templates.Folder, outputPath, stamp: stamp));
 
             return outputPath;
         }

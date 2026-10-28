@@ -1124,3 +1124,64 @@ a.button, .btn.button {
   image-rendering: pixelated;
 }
 .settings__sign figcaption { max-width: 28em; margin: 0; }
+
+/* The guest's pickup number on the booth screen. Sized against the viewport, not in
+   points: it is read from across the booth and remembered, nothing else matters. */
+.yournumber { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.yournumber__label {
+  margin: 0; font-size: clamp(18px, 2.6vw, 34px); font-weight: 600;
+  color: rgba(255, 255, 255, .8);
+}
+.yournumber__value {
+  margin: 0; font-size: clamp(120px, 26vh, 320px); line-height: 1; font-weight: 800;
+  color: #fff; font-variant-numeric: tabular-nums;
+}
+.yournumber__next {
+  margin: 8px 0 0; max-width: 14em; font-size: clamp(18px, 2.4vw, 30px);
+  color: rgba(255, 255, 255, .85);
+}
+
+/* The claiming station grid. Every strip is labelled with the guest's number, large,
+   because the operator is matching it against a number someone just said aloud. */
+.pickupbar { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.pickupbar label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.pickupbar__input { width: 9em; font-size: 28px; font-weight: 700; padding: 8px 12px; }
+.pickupgrid {
+  display: grid; gap: 14px; margin-top: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+.pickuptile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 10px 8px; border-radius: 12px; cursor: pointer; text-align: center;
+  background: var(--surface, rgba(255, 255, 255, .05)); border: 1px solid var(--line, rgba(255, 255, 255, .12));
+  color: inherit; font: inherit;
+}
+.pickuptile:hover, .pickuptile:focus-visible { border-color: var(--accent, #2563eb); outline: none; }
+.pickuptile__number { font-size: 34px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.pickuptile__strip { height: 210px; width: auto; max-width: 100%; border-radius: 6px; background: #fff; }
+.pickuptile__when { font-size: 12px; opacity: .65; }
+/* Only on hover or keyboard focus, so a screen of strips stays quiet. */
+.pickuptile__show {
+  position: absolute; left: 10px; right: 10px; bottom: 30px; padding: 10px 0; border-radius: 10px;
+  font-weight: 700; background: var(--accent, #2563eb); color: #fff;
+  opacity: 0; transform: translateY(6px); transition: opacity .12s, transform .12s; pointer-events: none;
+}
+.pickuptile:hover .pickuptile__show, .pickuptile:focus-visible .pickuptile__show { opacity: 1; transform: none; }
+
+.pickupdialog {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .66); padding: 16px;
+}
+.pickupdialog__card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+  background: var(--panel, #1b1e24); color: inherit; padding: 24px 28px; border-radius: 16px;
+  max-height: 100%; overflow: auto;
+}
+.pickupdialog__number { margin: 0; font-size: clamp(32px, 6vh, 56px); font-weight: 800; }
+/* White plate and hard pixels: the code is read by a phone held up to a laptop. */
+.pickupdialog__qr {
+  width: min(52vh, 420px); height: auto; background: #fff; padding: 14px; border-radius: 12px;
+  image-rendering: pixelated;
+}
+.pickupdialog__what { margin: 0; font-size: 18px; font-weight: 600; }
+.pickupdialog__wifi { margin: 0; font-size: 15px; opacity: .8; }

@@ -54,7 +54,15 @@ public sealed record SessionRecord(
     /// required parameter here would stop every existing session.json on disk
     /// from deserialising.
     /// </summary>
-    string? Animation = null);
+    string? Animation = null,
+    /// <summary>
+    /// The guest's pickup number, said aloud at the claiming station. Restarts at 1
+    /// each event day, so it only means something together with
+    /// <see cref="CreatedUtc"/>. Null for sessions made before numbers existed, and
+    /// when the booth hands over by QR; last in this list for the same reason as
+    /// <see cref="Animation"/>.
+    /// </summary>
+    int? Number = null);
 
 /// <summary>
 /// Writes each session to its own folder on disk.
@@ -143,7 +151,8 @@ public sealed class SessionArchive(
         IReadOnlyList<CapturedPhoto> captures,
         string stripSource,
         DateTimeOffset createdUtc,
-        string? animationSource = null)
+        string? animationSource = null,
+        int? number = null)
     {
         var folderName = FolderName(createdUtc, token);
         var folder = Path.Combine(Root, folderName);
@@ -186,7 +195,7 @@ public sealed class SessionArchive(
 
         var record = new SessionRecord(
             token, folderName, createdUtc, template.Name, template.ShotCount,
-            stripName, photoNames, sourceNames, Animation: animationName);
+            stripName, photoNames, sourceNames, Animation: animationName, Number: number);
 
         WriteRecord(folder, record);
 
@@ -400,6 +409,20 @@ public sealed class SessionArchive(
     }
 
     public bool DiskIsLow() => FreeDiskBytes() is { } free && free < _options.LowDiskWarningBytes;
+
+    /// <summary>
+    /// The event day a session belongs to, as <c>yyyy-MM-dd</c> in the booth's local
+    /// time -- the first ten characters of its folder name.
+    ///
+    /// Read from the name, not worked out from <see cref="SessionRecord.CreatedUtc"/>,
+    /// so the claiming station on another computer agrees with the booth about the
+    /// day whatever time zone it is set to.
+    /// </summary>
+    public static string DayOf(SessionRecord record) =>
+        record.FolderName.Length >= 10 ? record.FolderName[..10] : string.Empty;
+
+    /// <summary>The day a session starting at <paramref name="at"/> will be filed under.</summary>
+    public static string DayOf(DateTimeOffset at) => $"{at.ToLocalTime():yyyy-MM-dd}";
 
     /// <summary>Sortable, human-readable, and unique: 2026-09-05_1942_a7f3c2.</summary>
     private static string FolderName(DateTimeOffset at, string token)

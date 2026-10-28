@@ -116,6 +116,25 @@ public sealed class BoothSettings
     /// </summary>
     public bool? ClaimStationEnabled { get; set; }
 
+    /// <summary>
+    /// Whether a finished guest is given a short number to say at the claiming
+    /// station, instead of being shown a photos QR on the booth screen.
+    ///
+    /// When on, the number is taken at Accept, stamped on the strip, filed in
+    /// <c>session.json</c> and shown large on the guest screen. The claiming
+    /// station (another computer reading the same sessions folder) lists the
+    /// guests by number. Off by default, so a booth that does not use a claiming
+    /// station behaves as it always has.
+    /// </summary>
+    public bool? PickupByNumber { get; set; }
+
+    /// <summary>
+    /// Whether this computer is the claiming station and nothing else: it reads
+    /// the sessions folder that the booth computer fills, and never touches the
+    /// camera or starts a session. Off by default.
+    /// </summary>
+    public bool? ClaimingStationOnly { get; set; }
+
     // --- guest display ---
 
     /// <summary>

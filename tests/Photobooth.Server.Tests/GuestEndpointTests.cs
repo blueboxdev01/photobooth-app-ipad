@@ -107,6 +107,20 @@ public sealed class GuestEndpointTests
     }
 
     /// <summary>
+    /// The claiming station's list carries every guest's token, and a token is the
+    /// whole of a guest's security. It is for the operator port only.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/pickup")]
+    [InlineData("/api/pickup?day=2026-10-28")]
+    [InlineData("/pickup")]
+    public void The_claiming_stations_list_is_never_served_to_the_network(string path)
+    {
+        Assert.False(GuestEndpoint.IsGuestPath(path),
+            $"{path} lists every guest's token and must NOT be reachable from the network");
+    }
+
+    /// <summary>
     /// SignalR does not open a socket to the hub address. It first POSTs to
     /// <c>{hub}/negotiate</c> to agree a transport, and only then connects.
     ///

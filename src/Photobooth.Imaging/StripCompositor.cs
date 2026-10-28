@@ -75,12 +75,17 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
     /// <param name="templateFolder">
     /// Where the overlay named by the template lives.
     /// </param>
+    /// <param name="stamp">
+    /// Small text printed on the strip, such as the guest's pickup number. Null
+    /// leaves the strip as the template draws it.
+    /// </param>
     public void Compose(
         StripTemplate template,
         IReadOnlyList<string> photoPaths,
         string templateFolder,
         string outputPath,
-        int jpegQuality = 95)
+        int jpegQuality = 95,
+        string? stamp = null)
     {
         // Full resolution: this is the keepsake and the thing that gets printed,
         // so the slot gets every pixel the camera gave it.
@@ -89,7 +94,7 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
 
         try
         {
-            using var surface = Render(template, photos, art, SKAlphaType.Premul);
+            using var surface = Render(template, photos, art, SKAlphaType.Premul, stamp);
             Write(surface, template, outputPath, jpegQuality);
         }
         finally
@@ -173,11 +178,12 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
         IReadOnlyList<string> photoPaths,
         string templateFolder,
         string outputPath,
-        AnimationOptions? options = null)
+        AnimationOptions? options = null,
+        string? stamp = null)
     {
         var settings = options ?? AnimationOptions.Default;
 
-        var frames = RenderAnimationFrames(template, photoPaths, templateFolder, settings);
+        var frames = RenderAnimationFrames(template, photoPaths, templateFolder, settings, stamp);
         var (width, height, count) = (frames[0].Width, frames[0].Height, frames.Count);
 
         try
@@ -207,7 +213,8 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
         StripTemplate template,
         IReadOnlyList<string> photoPaths,
         string templateFolder,
-        AnimationOptions settings)
+        AnimationOptions settings,
+        string? stamp = null)
     {
         // Rendered small rather than at print size. Slots are stored as fractions
         // of the canvas precisely so a template survives a change of output size,
@@ -248,7 +255,7 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
                     rotated[slot] = photos[(slot + frame) % photoPaths.Count];
                 }
 
-                using var surface = Render(scaled, rotated, art, SKAlphaType.Opaque);
+                using var surface = Render(scaled, rotated, art, SKAlphaType.Opaque, stamp);
                 using var image = surface.Snapshot();
 
                 // Read into a bitmap of a colour type we have named, rather than
@@ -320,7 +327,8 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
         StripTemplate template,
         IReadOnlyList<SKBitmap?> photos,
         SKBitmap? art,
-        SKAlphaType alphaType)
+        SKAlphaType alphaType,
+        string? stamp = null)
     {
         if (photos.Count != template.Slots.Count)
         {
@@ -356,7 +364,45 @@ public sealed class StripCompositor(ILogger<StripCompositor> logger)
             DrawArt(canvas, template, art);
         }
 
+        // Last, so the art can never cover it.
+        if (!string.IsNullOrWhiteSpace(stamp))
+        {
+            DrawStamp(canvas, template.Canvas, stamp);
+        }
+
         return surface;
+    }
+
+    /// <summary>
+    /// A small label at the foot of the strip, on a white plate so it reads over
+    /// any frame art. Sized from the canvas width, so it keeps its proportions on
+    /// the printed strip, the on-screen preview and the shrunken video frames.
+    /// </summary>
+    private static void DrawStamp(SKCanvas canvas, TemplateCanvas size, string text)
+    {
+        var fontSize = size.Width * 0.065f;
+
+        using var typeface = SKTypeface.FromFamilyName("Helvetica", SKFontStyle.Bold)
+            ?? SKTypeface.Default;
+        using var font = new SKFont(typeface, fontSize);
+        using var ink = new SKPaint { Color = new SKColor(0x14, 0x16, 0x1A), IsAntialias = true };
+        using var plate = new SKPaint { Color = SKColors.White.WithAlpha(235), IsAntialias = true };
+
+        var width = font.MeasureText(text);
+        var padX = fontSize * 0.55f;
+        var padY = fontSize * 0.35f;
+        var margin = size.Width * 0.035f;
+
+        var plateRect = new SKRect(
+            (size.Width - width) / 2 - padX,
+            size.Height - margin - fontSize - 2 * padY,
+            (size.Width + width) / 2 + padX,
+            size.Height - margin);
+
+        canvas.DrawRoundRect(plateRect, padY, padY, plate);
+        canvas.DrawText(
+            text, size.Width / 2f, plateRect.Bottom - padY - fontSize * 0.12f,
+            SKTextAlign.Center, font, ink);
     }
 
     private static void DrawSlot(

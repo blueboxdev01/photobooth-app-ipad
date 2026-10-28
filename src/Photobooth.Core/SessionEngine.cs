@@ -54,6 +54,7 @@ public sealed class SessionEngine : IDisposable
     /// guest a code for another's photos.
     /// </summary>
     private string? _token;
+    private int? _number;
     private string? _sessionFolder;
 
     public SessionEngine(
@@ -93,6 +94,7 @@ public sealed class SessionEngine : IDisposable
             _order.Clear();
             _retakeSlot = null;
             _token = null;
+            _number = null;
             _startedUtc = _time.GetUtcNow();
             _message = null;
             _stripUrl = null;
@@ -387,7 +389,7 @@ public sealed class SessionEngine : IDisposable
 
     /// <summary>The strip is built and archived.</summary>
     public SessionSnapshot CompleteComposing(
-        string stripUrl, string sessionFolder, string? token = null)
+        string stripUrl, string sessionFolder, string? token = null, int? number = null)
     {
         SessionSnapshot snapshot;
         lock (_sync)
@@ -400,6 +402,7 @@ public sealed class SessionEngine : IDisposable
             _stripUrl = stripUrl;
             _sessionFolder = sessionFolder;
             _token = token;
+            _number = number;
             _state = SessionState.Done;
             snapshot = Build();
         }
@@ -444,6 +447,7 @@ public sealed class SessionEngine : IDisposable
             _order.Clear();
             _retakeSlot = null;
             _token = null;
+            _number = null;
             _state = SessionState.Idle;
             _countdownEnds = null;
             _timeoutAt = null;
@@ -535,7 +539,8 @@ public sealed class SessionEngine : IDisposable
         _sessionFolder,
         _retakeSlot,
         _token,
-        _time.GetUtcNow());
+        _time.GetUtcNow(),
+        _number);
 
     private void Publish(SessionSnapshot snapshot) => Changed?.Invoke(this, snapshot);
 

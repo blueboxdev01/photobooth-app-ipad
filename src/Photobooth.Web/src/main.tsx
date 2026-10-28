@@ -11,6 +11,7 @@ import { Diagnostics } from './Diagnostics'
 import { Display } from './Display'
 import { Gallery } from './Gallery'
 import { Operator } from './Operator'
+import { Pickup } from './Pickup'
 import { Templates } from './Templates'
 import './styles.css'
 
@@ -24,6 +25,7 @@ const view =
   : path === '/diagnostics' ? <Diagnostics />
   : path === '/templates' ? <Templates />
   : path === '/gallery' ? <Gallery />
+  : path === '/pickup' ? <Pickup />
   : <Operator />
 
 createRoot(document.getElementById('root')!).render(<StrictMode>{view}</StrictMode>)

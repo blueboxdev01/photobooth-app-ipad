@@ -46,6 +46,46 @@ public sealed class StripCompositorTests : IDisposable
         return path;
     }
 
+    /// <summary>
+    /// The pickup number printed on the strip. Pinned as a pixel difference at the
+    /// foot of the strip rather than against a golden image, which would break
+    /// with every font this runs on.
+    /// </summary>
+    [Fact]
+    public void A_stamp_is_drawn_at_the_foot_of_the_strip_and_nowhere_else()
+    {
+        var template = Classic();
+        var plain = Path.Combine(_output, "plain.jpg");
+        var stamped = Path.Combine(_output, "stamped.jpg");
+        var photos = Photos(template.ShotCount);
+
+        _compositor.Compose(template, photos, TemplateFolder, plain);
+        _compositor.Compose(template, photos, TemplateFolder, stamped, stamp: "No. 12");
+
+        using var a = SKBitmap.Decode(plain);
+        using var b = SKBitmap.Decode(stamped);
+
+        var topChanged = 0;
+        var footChanged = 0;
+        for (var y = 0; y < a.Height; y += 2)
+        {
+            for (var x = 0; x < a.Width; x += 2)
+            {
+                if (Differs(a.GetPixel(x, y), b.GetPixel(x, y)))
+                {
+                    if (y > a.Height * 0.85) { footChanged++; } else { topChanged++; }
+                }
+            }
+        }
+
+        Assert.True(footChanged > 200, "the stamp should show at the foot of the strip");
+        Assert.Equal(0, topChanged);
+    }
+
+    /// <summary>JPEG recompression moves pixels a little, so only a real change counts.</summary>
+    private static bool Differs(SKColor x, SKColor y) =>
+        Math.Abs(x.Red - y.Red) + Math.Abs(x.Green - y.Green) + Math.Abs(x.Blue - y.Blue) > 40;
+
     [Fact]
     public void The_shipped_template_is_a_three_slot_2x6_at_300_dpi()
     {

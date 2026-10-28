@@ -37,6 +37,76 @@ sessions are all on the Windows laptop.
 
 ---
 
+## 1b. The current setup: Mac booth, preview monitor, Windows claiming station
+
+This is how the booth is run now. The rest of this guide still applies for the router, the
+camera and the Mac, but **where it says iPad, read the monitor on the Mac, and where it says the
+Windows laptop is the booth, read the MacBook.**
+
+```
+ Canon R50 --USB--> MACBOOK --cable/wifi--> ROUTER (WAN empty) <--wifi-- guests' phones
+ (BR-E1 remote)     booth app, EOS Utility,        ^
+ [external monitor] all the sessions, shared       |-- Windows laptop  /pickup  the claiming station
+  = guest screen    over SMB                       '-- (reads the Mac's shared sessions folder)
+```
+
+| Device | Job |
+|---|---|
+| **MacBook** | The whole booth. Takes the photos, builds each guest's strip, stores everything, and **shares its sessions folder**. Staff press Accept here |
+| **External monitor on the Mac** | The guest screen. Shows the countdown, the strip, then the guest's **number** |
+| **Windows laptop** | The **claiming station**. Reads the Mac's shared folder and shows a grid of every guest by number. Serves the download page to phones |
+| **Router** | The only network, no internet on it |
+
+### How a guest moves through it
+
+1. **Queue.** A sign shows the join-wifi QR; they join the booth wifi while they wait.
+2. **Centre stage.** They frame on the camera's viewfinder; staff press the BR-E1 for each shot (4 shots). The monitor counts down.
+3. **Preview and Accept.** The monitor shows their strip. Staff press **Accept** on the Mac.
+4. **A number.** The monitor shows a large **number** (1, 2, 3, restarting each day). The same number is stamped on the strip.
+5. **Claim.** The guest goes to the Windows laptop and says their number. The operator types it in the **Claiming Station** page, hovers the guest's strip, clicks **Show QR**, and the guest scans it to download **4 photos, the strip and the video**.
+
+### Set up the Mac (the booth)
+
+1. Everything in the Mac section below (EOS Utility, `brew install ffmpeg`, the app).
+2. **Settings** on the Mac:
+   - **Guest photos over your wifi**: switch on **Let guests download their photos**, enter the wifi name and password, and press **Save wifi details** (this prints the queue-sign QR too).
+   - Press **Hand over by number**. (This is what gives each guest a number and puts it on the strip and the monitor.)
+   - Leave **Use a separate claiming station** off. The Windows laptop does not use it.
+   - **Photos per strip: 4.** See the note below about the frame art.
+3. **Share the sessions folder.** System Settings > General > Sharing > **File Sharing**: add the booth's **Output folder** (shown on Settings, usually `.../data/sessions` beside the app) as a shared folder, and give the Windows laptop's user **Read & Write** (the app only reads, but Settings' *Check* button tests by writing a file). Note the Mac's address, for example `smb://192.168.8.101`.
+4. **The monitor.** Run `tools/mac-display.command --local` (or open `http://localhost:5000/display`) on the external monitor, fullscreen. No iPad, certificate or HTTPS is needed any more.
+5. The Mac must **never sleep**: System Settings > Lock Screen > display off **Never**, power connected, lid open (or use the external display with the lid closed and keep the Mac awake).
+
+### Set up the Windows laptop (the claiming station)
+
+1. Install the Windows build as in section 5.
+2. **Connect to the Mac's share**: File Explorer > address bar `\\<Mac address>\<share name>`, sign in as the Mac user, tick **Remember my credentials**. Map it to a drive letter (right-click > Map network drive, **Reconnect at sign-in**) so it is still there after a restart.
+3. Open `http://localhost:5000/diagnostics` (Settings) on the Windows laptop and set:
+   - **Output folder**: the shared folder (e.g. `Z:\` or `\\192.168.8.101\Photobooth`). Press **Check**, then **Save**.
+   - **Guest photos over your wifi**: **Let guests download their photos**, the **same wifi name and password**, and **Guests reach the booth at**: this laptop's address **on the router** (not another network).
+   - **Serve the display to the network**: on. This is what opens the port phones use to download. (The iPad certificate is not used.)
+   - **This computer is the claiming station only**: on. **Restart the app** afterwards.
+4. Allow `Photobooth.Server` on **Private networks** when Windows Firewall asks.
+5. Open `http://localhost:5000/pickup`. After a guest is accepted on the Mac, their number appears here within a few seconds.
+
+### Check it
+
+- [ ] A test guest on the Mac gets a number; the monitor shows it large with no QR; `strip.jpg` has *No. N* at the foot.
+- [ ] That number appears on the Windows laptop's **Claiming Station** within about 3 seconds.
+- [ ] Type the number: only that guest remains. Hover their strip: **Show QR** appears. Click: a large QR.
+- [ ] A phone on the booth wifi scans it and opens a page with **4 photos, the strip and the video**, and **Download all** works.
+- [ ] The next guest gets the next number; restart the Mac's booth app, and the one after that carries on (it does not repeat a number).
+
+### Things to know
+
+- **Numbers restart each day.** The claiming station has a **Day** picker (it defaults to today). To start again from 1 in the middle of a day, delete the test sessions' folders from the Output folder and restart the Mac's booth app.
+- **The Mac must be on** for the Windows laptop to see new guests. Download pages are served by the Windows laptop, from the shared folder, so a guest can only download while **both** are on and on the wifi.
+- **4 photos and the frame.** The shipped `classic-2x6` frame has three windows. Setting 4 photos per strip removes that frame art and gives a plain 4-photo strip with the number at the foot. A branded 4-window frame needs new art made for it (Templates).
+- **No video on the download page?** The Mac needs ffmpeg (`brew install ffmpeg`).
+- **The video is an MP4, not a GIF**, which is what Instagram and Facebook accept.
+
+---
+
 ## 2. What to have
 
 - [ ] Windows laptop, charger, **no "N" edition of Windows** (it lacks the H.264 encoder and the video will not be made)

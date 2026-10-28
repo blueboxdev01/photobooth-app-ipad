@@ -41,6 +41,10 @@ interface SettingsResponse {
     ssid: string | null
     /** Photos are collected at a separate claiming station (`/claim`). */
     claimStation: boolean
+    /** Guests are given a number to say at the claiming station. */
+    pickupByNumber: boolean
+    /** This computer only claims photos: no camera, no sessions. */
+    claimingStationOnly: boolean
     hasPassword: boolean
     /** The address guests are actually being sent to right now. */
     photosHost: string
@@ -851,6 +855,52 @@ function GuestGallery({
                   they finish, even while the next one is posing.</>
               : <>Off: the guest screen shows the photos code itself at the end of a session.
                   Turn this on if guests collect from a second screen.</>}
+          </p>
+
+          <div className="controls">
+            <button className="btn" disabled={busy}
+                    onClick={() => void save(
+                      { pickupByNumber: !g.pickupByNumber },
+                      g.pickupByNumber
+                        ? 'Guests will be shown a photos code again.'
+                        : 'Guests will be given a number to say at the claiming station.')}>
+              {g.pickupByNumber ? 'Stop handing over by number' : 'Hand over by number'}
+            </button>
+          </div>
+
+          <p className="muted small">
+            {g.pickupByNumber
+              ? <>On: each guest is given a number (1, 2, 3&hellip;, starting again each
+                  day) when you press Accept. It is stamped on their strip and shown
+                  large on the booth screen, with no code. They say it at the claiming
+                  station, where the operator finds them on <code>/pickup</code> and
+                  shows the code. To start again from 1 mid-day, delete the test
+                  sessions&rsquo; folders from the output folder and restart the booth.</>
+              : <>Off: guests are not given a number.</>}
+          </p>
+
+          <div className="controls">
+            <button className="btn" disabled={busy}
+                    onClick={() => void save(
+                      { claimingStationOnly: !g.claimingStationOnly },
+                      g.claimingStationOnly
+                        ? 'This computer can run the booth again. Restart the booth.'
+                        : 'This computer is the claiming station only. Restart the booth.')}>
+              {g.claimingStationOnly
+                ? 'Make this the booth computer again'
+                : 'This computer is the claiming station only'}
+            </button>
+          </div>
+
+          <p className="muted small">
+            {g.claimingStationOnly
+              ? <>On: this computer reads the sessions folder the booth computer fills
+                  (set <strong>Output folder</strong> to that shared folder). It does not
+                  start the camera, and Start Session is hidden. Restart the booth after
+                  changing this.</>
+              : <>Off: this is the booth computer. Turn this on, with the Output folder
+                  pointing at the booth&rsquo;s shared sessions folder, on the computer at the
+                  claiming station.</>}
           </p>
 
           <dl className="facts">

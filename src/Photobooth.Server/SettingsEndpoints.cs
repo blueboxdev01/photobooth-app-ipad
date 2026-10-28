@@ -28,7 +28,9 @@ public sealed record SettingsUpdate(
     string? GuestWifiPassword,
     string? GuestPhotosAddress,
     bool? AnimationEnabled,
-    bool? ClaimStationEnabled = null);
+    bool? ClaimStationEnabled = null,
+    bool? PickupByNumber = null,
+    bool? ClaimingStationOnly = null);
 
 /// <summary>
 /// Everything an operator sets up per event: where the camera's photos arrive,
@@ -110,6 +112,8 @@ public static class SettingsEndpoints
                     enabled = store.Current.GuestGalleryEnabled ?? false,
                     ssid = store.Current.GuestWifiSsid,
                     claimStation = store.Current.ClaimStationEnabled ?? false,
+                    pickupByNumber = store.Current.PickupByNumber ?? false,
+                    claimingStationOnly = store.Current.ClaimingStationOnly ?? false,
                     hasPassword = !string.IsNullOrEmpty(store.Current.GuestWifiPassword),
                     photosHost = GuestGalleryLinks.GuestHost(store.Current.GuestPhotosAddress),
                     photosPort = guestDisplay.Value.CertPort,
@@ -262,6 +266,16 @@ public static class SettingsEndpoints
             if (update.ClaimStationEnabled is { } claimStation)
             {
                 settings.ClaimStationEnabled = claimStation;
+            }
+
+            if (update.PickupByNumber is { } pickupByNumber)
+            {
+                settings.PickupByNumber = pickupByNumber;
+            }
+
+            if (update.ClaimingStationOnly is { } claimingOnly)
+            {
+                settings.ClaimingStationOnly = claimingOnly;
             }
 
             if (update.GuestWifiSsid is { } ssid)

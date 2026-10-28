@@ -9,6 +9,11 @@
 #
 #   ./mac-display.command 192.168.8.100            claiming station
 #   ./mac-display.command 192.168.8.100 --display  the booth screen instead
+#   ./mac-display.command --local                  the booth screen, from THIS Mac
+#
+# --local is for the Mac that runs the booth, with the guest monitor plugged into
+# it: it opens http://localhost:5000/display fullscreen, so there is no address to
+# enter and no certificate to trust (localhost is already a secure context).
 #
 # The address is the one on the Windows booth's Settings page, under "This
 # machine" -- the same one entered under "Guests reach the booth at".
@@ -21,13 +26,42 @@ CHROME="/Applications/Google Chrome.app"
 
 host=""
 page="claim"
+local_booth=0
 for arg in "$@"; do
   case "$arg" in
     --display) page="display" ;;
     --claim)   page="claim" ;;
+    --local)   local_booth=1; page="display" ;;
     *)         host="$arg" ;;
   esac
 done
+if [[ "$local_booth" -eq 1 ]]; then
+  # The booth app is on this Mac. Is it running?
+  if ! curl -fsS --max-time 5 -o /dev/null "http://localhost:5000/api/state"; then
+    echo
+    echo "Cannot reach the booth at http://localhost:5000 on this Mac."
+    echo "Start Photobooth.Server first, then run this again."
+    exit 1
+  fi
+
+  caffeinate -dis &
+  CAFFEINATE=$!
+  trap 'kill $CAFFEINATE 2>/dev/null || true' EXIT
+
+  echo "Opening the guest screen. Quit with Cmd+Q."
+  echo "If it opens on the wrong screen: quit, make the external monitor the main display"
+  echo "(System Settings > Displays > Use as: Main display), and run this again."
+  if [[ -d "$CHROME" ]]; then
+    open -n -W -a "$CHROME" --args \
+      --user-data-dir="$PROFILE" --kiosk --no-first-run \
+      --disable-session-crashed-bubble --noerrdialogs \
+      "http://localhost:5000/display"
+  else
+    open -W -a Safari "http://localhost:5000/display"
+  fi
+  exit 0
+fi
+
 if [[ -z "$host" && -f "$SAVED" ]]; then
   host="$(cat "$SAVED")"
 fi
