@@ -145,8 +145,12 @@ public sealed class GuestNumbersTests : IDisposable
     {
         var saved = Save("aaaaaa", Noon, 7);
         var path = Path.Combine(_archive.FolderFor(saved), "session.json");
-        File.WriteAllText(path, File.ReadAllText(path).Replace("\"number\": 7,", string.Empty)
-            .Replace(",\n  \"number\": 7", string.Empty));
+
+        // Removed as JSON, not as text: the file is indented with the platform's
+        // line ending, so a string edit that works on a Mac misses on Windows.
+        var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        Assert.True(json.Remove("number"), "the record should have been written with a number");
+        File.WriteAllText(path, json.ToJsonString());
 
         var read = _archive.ByToken("aaaaaa");
 
