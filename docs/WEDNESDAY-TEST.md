@@ -1,5 +1,8 @@
 # Test flow: Mac booth, preview monitor, Windows claiming station
 
+For build **v0.19.0**. Windows: `photobooth-v0.19.0-win-x64.zip`. Mac: `photobooth-v0.19.0-macos-arm64.zip`
+(unsigned: run `xattr -dr com.apple.quarantine <folder>` once), or build it on the Mac.
+
 Two computers and a monitor. **The MacBook is the booth**: it takes the photos, builds every
 strip and stores everything. An **external monitor on the Mac** is the guest screen. The
 **Windows laptop is the claiming station**: it reads the Mac's shared folder and shows each

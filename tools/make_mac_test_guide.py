@@ -189,8 +189,9 @@ E = story.extend
 A(Paragraph("Pickup by number: setup and test flow", S_TITLE))
 A(Spacer(1, 4))
 A(Paragraph(
-    "MacBook booth with a preview monitor, and the Windows laptop as the claiming "
-    "station. From the queue to a phone holding four photos, a strip and a video.", S_SUB))
+    "Build <b>v0.19.0</b> &nbsp;&middot;&nbsp; MacBook booth with a preview monitor, and the Windows "
+    "laptop as the claiming station. From the queue to a phone holding four photos, a strip and a "
+    "video.", S_SUB))
 A(Spacer(1, 12))
 
 A(table(
@@ -262,8 +263,9 @@ A(ticks([
     "Camera tethered: <b>Photo Import/Remote Control</b>, manual exposure and white balance, <b>JPEG "
     "only</b>, auto power-off off, BR-E1 paired. <b>Photos / Image Capture closed.</b> EOS Utility "
     "destination folder = the booth's watch folder.",
-    "Booth app running (<font face='Courier'>dotnet run --project src/Photobooth.Server</font>, or the Mac "
-    "ZIP). Allow incoming connections when asked. <font face='Courier'>http://localhost:5000/operator</font> opens.",
+    "Booth app running: <font face='Courier'>photobooth-v0.19.0-macos-arm64.zip</font> (unsigned: "
+    "<font face='Courier'>xattr -dr com.apple.quarantine &lt;folder&gt;</font> once), or "
+    "<font face='Courier'>dotnet run --project src/Photobooth.Server</font>. Allow incoming connections when asked. <font face='Courier'>http://localhost:5000/operator</font> opens.",
 ]))
 E(rule(6, 6))
 
@@ -299,7 +301,7 @@ E(rule(6, 6))
 
 E(stage("E. The Windows laptop (claiming station)"))
 A(ticks([
-    "Windows build installed and run. Allow <font face='Courier'>Photobooth.Server</font> on "
+    "<font face='Courier'>photobooth-v0.19.0-win-x64.zip</font> unzipped and run. Allow <font face='Courier'>Photobooth.Server</font> on "
     "<b>Private networks</b> when asked.",
     "Connect to the Mac's share: File Explorer &gt; <font face='Courier'>\\\\&lt;Mac address&gt;\\&lt;share&gt;"
     "</font>. Sign in as the Mac user, tick <b>Remember my credentials</b>, and map it to a drive letter "

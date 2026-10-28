@@ -1,6 +1,6 @@
 # Setting up the photobooth, start to finish
 
-For build **v0.18.0** or newer. Follow it top to bottom the first time; after that
+For build **v0.19.0** or newer. Follow it top to bottom the first time; after that
 the checklist in section 10 is all you need on the day.
 
 **Allow about two hours the first time**, most of it the camera and the router.
@@ -161,8 +161,8 @@ Do this first; everything else needs it.
 
 ### Install the booth
 
-1. Download **`photobooth-v0.18.0-win-x64.zip`**:
-   <https://github.com/blueboxdev01/photobooth-app-ipad/releases/download/v0.18.0/photobooth-v0.18.0-win-x64.zip>
+1. Download **`photobooth-v0.19.0-win-x64.zip`**:
+   <https://github.com/blueboxdev01/photobooth-app-ipad/releases/download/v0.19.0/photobooth-v0.19.0-win-x64.zip>
 2. Right-click the ZIP → **Properties** → tick **Unblock** if it is there → OK. Then **Extract All** to a folder you will keep, such as `C:\Photobooth` (not Downloads).
 3. Keep the `ffmpeg` folder where it is, beside the exe. It makes the guest video.
 4. Run **`Photobooth.Server.exe`**. If SmartScreen warns about an unsigned program, choose **More info → Run anyway**.
@@ -197,7 +197,7 @@ before the event.** Then:
 `brew install ffmpeg`. The booth finds it in `/opt/homebrew/bin` or `/usr/local/bin` and uses the
 Mac's own H.264 encoder.
 
-Then either download **`photobooth-<version>-macos-arm64.zip`** from the releases
+Then either download **`photobooth-v0.19.0-macos-arm64.zip`** from the releases
 page, or build it on the Mac (needs the .NET 10 SDK and Node 22):
 
 ```bash
@@ -335,7 +335,7 @@ On the day, once everything is plugged in:
 | Remote does nothing | BR-E1 lost its pairing while tethered | Press the camera's own shutter; re-pair after the event |
 | iPad or Mac cannot load the page | Different network, or the booth was not restarted after switching the display on, or Windows Firewall | Same router? Restart the booth. Allow it on Private networks |
 | Browser warns the connection is not private | Certificate installed but not **trusted** | iPad: Certificate Trust Settings → on. Mac: Keychain → Always Trust |
-| iPad sits on *Connecting…* | A booth older than v0.12.2 | Use v0.18.0 |
+| iPad sits on *Connecting…* | A booth older than v0.12.2 | Use v0.19.0 |
 | The join-wifi QR scans and nothing happens | Wifi name in Settings is wrong, or the router is off | Match the name exactly, case included |
 | Joined, but the photos page never loads | Booth advertising the wrong address, or router isolating devices | Settings → *Guests reach the booth at*. Turn off the router's guest mode and client isolation |
 | The page loaded once then stopped (Android) | Phone switched back to mobile data | Rejoin the wifi and tell it to stay connected |
