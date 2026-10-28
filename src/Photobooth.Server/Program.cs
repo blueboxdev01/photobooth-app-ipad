@@ -303,8 +303,9 @@ app.MapGet("/api/delivery", (SessionCoordinator coordinator) =>
 
 // Scanned from the iPad rather than typed. Not on the guest allowlist, so it is
 // reachable only from this machine.
-// The two codes a guest is shown at the end of a session. Reachable from the
-// display port, because that is where the guest screen runs.
+// The photos code a guest is shown at the end of a session, and the join-wifi
+// code the operator prints for the queue sign. Reachable from the display port,
+// because that is where the guest screen runs.
 app.MapGet("/api/guest-gallery/qr", (
     string target, string? token, SettingsStore store, IOptions<GuestDisplayOptions> options) =>
 {

@@ -10,11 +10,18 @@ took every guest's link with it. Nothing here can be suspended.
 
 ## What a guest does
 
-At the end of a session the guest screen shows two codes:
+A guest does two things, and only the second is on the guest screen:
 
-1. **Join the wifi** — a code their phone camera recognises as a network. Both
-   iOS and Android join from the camera app without typing a password.
-2. **Scan for your photos** — their own session, and nobody else's.
+1. **Join the wifi**, from a sign by the queue. The sign carries a code their
+   phone camera recognises as a network; both iOS and Android join from the camera
+   app without typing a password. Settings shows the code to print (see
+   *Get guests joined before the end of the session* below).
+2. **Scan for your photos** — the one code the guest screen shows at the end. It is
+   their own session, and nobody else's. The wifi name is printed under it in
+   words, for anyone who has not joined yet.
+
+One code cannot do both jobs: a phone camera either joins a network or opens a
+link, and the link only works once the phone is on the booth's network.
 
 The page has the strip, **a short video of it**, each photo, and a **Download
 all as a zip**, because a phone taking six files one at a time is something
@@ -34,8 +41,8 @@ missing, sessions still work and simply have no video.
 
 Switch on **Settings → Guest photos over your wifi → Use a separate claiming
 station** and the booth screen stops showing the photos code. After Accept it tells
-the guest to go to the claiming station, with the join-wifi code small beside it for
-whoever is still in the queue.
+the guest to go to the claiming station, with the wifi name beside it for whoever is
+still in the queue.
 
 The claiming station is any screen opened at `/claim` on the guest display's address
 (`https://<booth>:5002/claim`; on a Mac, `tools/mac-display.command`). It shows the
@@ -117,11 +124,12 @@ your guests need to reach.
 
 #### Get guests joined before the end of the session
 
-The join-wifi code on the guest screen only appears once a session has finished,
-which makes joining the slowest step of the whole claim. Print the same code on
-a **sign by the queue** (the wifi name and password are in Settings; any QR
-generator will make a `WIFI:S:<name>;T:WPA;P:<password>;;` code). Guests who join
-while they wait then only need the photos code at the end.
+The guest screen no longer shows a join-wifi code, so the sign is how guests get
+onto the network. **Settings → Guest photos over your wifi** shows the code once
+the wifi name is saved: print or screenshot it and put it by the queue, with the
+name and password in words beside it. (Any QR generator will also make one from
+`WIFI:S:<name>;T:WPA;P:<password>;;`.) Guests who join while they wait then only
+need the photos code at the end.
 
 Other things that make the router faster for many phones at once:
 

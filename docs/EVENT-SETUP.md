@@ -30,10 +30,10 @@ sessions are all on the Windows laptop.
 
 ### How a guest moves through it
 
-1. **Queue.** A sign shows the join-wifi QR; they join while they wait.
+1. **Queue.** A sign shows the join-wifi QR; they join while they wait. This is the only place that code appears: the screens at the end show just the photos QR.
 2. **Centre stage.** They frame on the camera's own viewfinder (the iPad has no live view). The iPad counts down 3-2-1; **staff press the BR-E1** for each shot. 3 or 4 shots.
 3. **Preview.** The iPad shows their finished strip. Staff at the laptop press **Accept**, or **Retake this one** on a shot they want redone.
-4. **Claim.** The iPad says *"Collect your photos at the claiming station"*. The MacBook shows their strip and a QR; they scan it with their phone and download.
+4. **Claim.** The iPad says *"Collect your photos at the claiming station"*. The MacBook shows their strip and **one** QR, their photos, with the wifi name in words beneath it; they scan it with their phone and download.
 
 ---
 
@@ -87,7 +87,7 @@ Do this first; everything else needs it.
 
 ---
 
-## 5. The Windows laptop
+## 5. The booth computer: a Windows laptop or a MacBook
 
 ### Install the booth
 
@@ -107,6 +107,51 @@ Do this first; everything else needs it.
 - [ ] The router connection's network profile is **Private**.
 - [ ] **Mobile Hotspot is off.** It shares the laptop's internet with guests and caps at 8 devices.
 - [ ] Optional: exclude the booth's `data\` folder and the EOS Utility folder from Defender real-time scanning.
+
+### Or: a MacBook as the booth computer
+
+The booth runs on a Mac as well as on Windows, and everything else in this guide
+is the same. The differences:
+
+**Canon's app.** Install **EOS Utility 3 for macOS** from Canon's support site
+(search *EOS Utility 3* for your camera, take the macOS `.dmg.zip`). The R50 needs
+3.16.10 or later, and 3.19.0 or later runs natively on Apple Silicon. Canon's
+latest build lists macOS 26, 15 and 14 as supported; **check the download page
+for your macOS version, and run the ten-press test in section 4 on the actual Mac
+before the event.** Then:
+
+- In EOS Utility's **Preferences → Destination Folder**, choose the folder the booth watches.
+- If macOS opens **Photos** or **Image Capture** when the camera is plugged in, close it. Either can claim the camera and leave EOS Utility unable to connect.
+
+**Install the booth.** Install ffmpeg once, for the guest video, with
+`brew install ffmpeg`. The booth finds it in `/opt/homebrew/bin` or `/usr/local/bin` and uses the
+Mac's own H.264 encoder.
+
+Then either download **`photobooth-<version>-macos-arm64.zip`** from the releases
+page, or build it on the Mac (needs the .NET 10 SDK and Node 22):
+
+```bash
+cd src/Photobooth.Web && npm ci && npm run build && cd ../..
+dotnet run --project src/Photobooth.Server
+```
+
+A downloaded ZIP is unsigned, so macOS blocks it the first time. Run
+`xattr -dr com.apple.quarantine <the folder>` once, then `./Photobooth.Server`.
+Building it yourself avoids this.
+
+When macOS asks whether `Photobooth.Server` may **accept incoming network
+connections**, choose **Allow**. Then open <http://localhost:5000/operator>.
+
+**Settings differences.**
+- Folders are Mac paths such as `/Users/you/Pictures/Tethered`; `~/Pictures/Tethered` works too.
+- The iPad reaches the booth at `https://<Mac name>.local:5002/display`; a Mac advertises that name itself. Spaces in the Mac's name become hyphens (`Juans-MacBook-Pro.local`).
+- The booth's certificate key is stored in `data/` with owner-only permissions rather than Windows encryption, so **turn on FileVault** (System Settings → Privacy & Security).
+
+**Power.** System Settings → Lock Screen: display off **Never** on power, and keep it plugged in. Closing the lid sleeps a Mac, so keep it open.
+
+**The claiming screen on the same Mac.** The page is just the browser: open
+<http://localhost:5000/claim> on the booth Mac for a claiming screen with no
+certificate step. A second screen still follows the MacBook steps in section 7.
 
 ---
 
@@ -131,6 +176,7 @@ On the Windows laptop, **<http://localhost:5000/operator>** → **Settings** (bo
 ### Guest display on an iPad
 - Press **Serve the display to an iPad**, then **restart the booth** (close it and run `Photobooth.Server.exe` again). The ports only open at start-up.
 - The page now shows two QR codes and the laptop's address. Keep it open for the next two sections.
+- Once the wifi name is saved, a third code appears under the wifi fields: that is the join-wifi QR for the queue sign (section 8).
 
 ### Looping video
 - Leave it **on**. If a queue builds and you need seconds back, switch it off.
@@ -164,7 +210,7 @@ Detail is in [IPAD-DISPLAY.md](IPAD-DISPLAY.md). In short:
 
 ## 8. The queue sign
 
-Print the join-wifi QR so guests are on the network **before** their turn. Make it from `WIFI:S:<name>;T:WPA;P:<password>;;` with any QR generator (or screenshot the one on the Mac's claiming page). Put the wifi name and password in text beside it, and:
+Print the join-wifi QR so guests are on the network **before** their turn. The guest screens no longer show it, so this sign is the only way guests get it. Print or screenshot the code on **Settings → Guest photos over your wifi** (or make one from `WIFI:S:<name>;T:WPA;P:<password>;;` with any QR generator). Put the wifi name and password in text beside it, and:
 
 > **Your phone will say "no internet". That's normal. Stay connected.**
 
@@ -224,7 +270,7 @@ On the day, once everything is plugged in:
 | Joined, but the photos page never loads | Booth advertising the wrong address, or router isolating devices | Settings → *Guests reach the booth at*. Turn off the router's guest mode and client isolation |
 | The page loaded once then stopped (Android) | Phone switched back to mobile data | Rejoin the wifi and tell it to stay connected |
 | The MacBook shows nobody after Accept | Claiming station not switched on, or the Mac's page is old | Settings → *Use a separate claiming station*; reload the Mac page |
-| No video on the guest page | `ffmpeg` folder missing, or a Windows "N" edition | Keep `ffmpeg\` beside the exe. Sessions still work without the video |
+| No video on the guest page | `ffmpeg` folder missing, or a Windows "N" edition; on a Mac, ffmpeg not installed | Keep `ffmpeg\` beside the exe, or on a Mac run `brew install ffmpeg`. Sessions still work without the video |
 | Strip preview never appears on the iPad | The iPad is on an older page | Reload it from the Home Screen icon. The shots show meanwhile |
 
 The **Diagnostics** page (`/diagnostics`) shows what the booth saw and why it rejected anything, and can export a bundle that contains no photographs.

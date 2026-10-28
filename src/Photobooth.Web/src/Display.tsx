@@ -105,9 +105,9 @@ export function Display() {
  * Where to go next, when the photos are collected at a separate claiming
  * station rather than from this screen.
  *
- * The join-wifi code is offered here, to the people still in the queue: this is
- * the screen they are standing next to while they wait, and a guest who has
- * joined before their turn has one step fewer to do at the end.
+ * The network name is mentioned here, for the people still in the queue: a guest
+ * who has joined before their turn has one step fewer to do at the end. The
+ * code to join it is on the sign by the queue, not on this screen.
  */
 function ToTheStation({ ssid }: { ssid: string | null }) {
   return (
@@ -116,14 +116,11 @@ function ToTheStation({ ssid }: { ssid: string | null }) {
         Collect your photos at the <b>claiming station</b>
       </p>
       {ssid && (
-        <figure className="handout__step handout__step--small">
-          <img src="/api/guest-gallery/qr?target=join" alt="" />
-          <figcaption>
-            Next in line? Join the wifi now
-            <br />
-            <span className="handout__ssid">{ssid}</span>
-          </figcaption>
-        </figure>
+        <p className="handout__join">
+          Next in line? Join the wifi now
+          <br />
+          <span className="handout__ssid">{ssid}</span>
+        </p>
       )}
     </div>
   )
@@ -149,29 +146,28 @@ function Handover({
   delivery: DeliveryUpdate | null
   gallery: { enabled: boolean; ssid: string | null }
 }) {
-  // Photos served by the booth itself. Two codes, because there are two steps
-  // and the first is the one that loses people: a phone cannot open a page on
-  // the booth until it is on the booth's network.
+  // Photos served by the booth itself. One code: a phone cannot open a page on
+  // the booth until it is on the booth's network, but the code to join it is on
+  // the sign by the queue, so the guest is already there by now. The name is
+  // repeated in words for the one who is not.
   if (gallery.enabled && snapshot.token) {
     return (
       <div className="handout">
-        {gallery.ssid && (
-          <figure className="handout__step">
-            <img src="/api/guest-gallery/qr?target=join" alt="" />
-            <figcaption>
-              <b>1.</b> Join the wifi
-              <br />
-              <span className="handout__ssid">{gallery.ssid}</span>
-            </figcaption>
-          </figure>
-        )}
         <figure className="handout__step">
           <img
             src={`/api/guest-gallery/qr?target=photos&token=${encodeURIComponent(snapshot.token)}`}
             alt=""
           />
           <figcaption>
-            <b>{gallery.ssid ? '2.' : ''}</b> Scan for your photos
+            Scan for your photos
+            {gallery.ssid && (
+              <>
+                <br />
+                <span className="handout__hint">
+                  On the wifi <span className="handout__ssid">{gallery.ssid}</span>
+                </span>
+              </>
+            )}
           </figcaption>
         </figure>
       </div>

@@ -42,6 +42,12 @@ internal static class Mp4Writer
         // 4M this used to ask for roughly doubled the download for no visible
         // difference. Check a real session's strip.mp4 before lowering it again.
         ("h264_mf", ["-b:v", "2M"]),
+
+        // The same job on a Mac: VideoToolbox is the H.264 encoder macOS ships,
+        // and every ffmpeg build for the Mac includes it. Windows tries it, fails
+        // in a few milliseconds and carries on, as it does for libx264 on an lgpl
+        // build, so the list needs no per-OS branching.
+        ("h264_videotoolbox", ["-b:v", "2M"]),
     ];
 
     /// <summary>
@@ -224,10 +230,14 @@ internal static class Mp4Writer
 
         var exe = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
 
+        // Homebrew's folders are not on the PATH of an app started from Finder,
+        // which is the usual way a Mac runs the booth.
         foreach (var candidate in new[]
         {
             Path.Combine(AppContext.BaseDirectory, "ffmpeg", exe),
             Path.Combine(AppContext.BaseDirectory, exe),
+            "/opt/homebrew/bin/ffmpeg",
+            "/usr/local/bin/ffmpeg",
         })
         {
             if (File.Exists(candidate))

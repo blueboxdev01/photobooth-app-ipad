@@ -232,7 +232,8 @@ Skip if you are handing photos over by hand. Settings is
 
 From **your own phone**, on the booth's wifi:
 
-- [ ] The join code actually joins the network, without typing a password
+- [ ] The join code on the queue sign (printed from Settings) actually joins the network, without typing a password
+- [ ] The photos code is the only code on the guest screen, with the wifi name in words under it
 - [ ] The photos code opens **your** session
 - [ ] The strip and every photo are there
 - [ ] Download one — it opens, and is named for the session

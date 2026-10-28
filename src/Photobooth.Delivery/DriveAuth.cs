@@ -1,4 +1,3 @@
-using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using Google.Apis.Auth.OAuth2;
@@ -202,7 +201,6 @@ public sealed class DriveAuth(IOptions<DriveOptions> options, ILogger<DriveAuth>
 /// rest with DPAPI: readable by this Windows user on this machine, and useless
 /// if the file is copied off.
 /// </summary>
-[SupportedOSPlatform("windows")]
 internal sealed class DpapiTokenStore(string path) : IDataStore
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("Photobooth.Delivery.Drive");
@@ -225,8 +223,7 @@ internal sealed class DpapiTokenStore(string path) : IDataStore
         var file = PathFor(key);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
 
-        File.WriteAllBytes(file, ProtectedData.Protect(
-            Encoding.UTF8.GetBytes(json), Entropy, DataProtectionScope.CurrentUser));
+        SecretProtector.Write(file, Encoding.UTF8.GetBytes(json), Entropy);
 
         return Task.CompletedTask;
     }
@@ -241,16 +238,17 @@ internal sealed class DpapiTokenStore(string path) : IDataStore
 
         try
         {
-            var json = Encoding.UTF8.GetString(ProtectedData.Unprotect(
-                File.ReadAllBytes(file), Entropy, DataProtectionScope.CurrentUser));
+            var json = Encoding.UTF8.GetString(SecretProtector.Read(file, Entropy));
 
             return Task.FromResult(
                 Google.Apis.Json.NewtonsoftJsonSerializer.Instance.Deserialize<T>(json));
         }
-        catch (CryptographicException)
+        catch (Exception ex) when (ex is CryptographicException or Newtonsoft.Json.JsonException)
         {
-            // Copied from another machine or another Windows account. Treat it as
-            // no token rather than a crash: the fix is to sign in again.
+            // Copied from another machine or another Windows account (DPAPI cannot
+            // decrypt it), or damaged (off Windows it is plain JSON that no longer
+            // parses). Treat it as no token rather than a crash: the fix is to
+            // sign in again.
             return Task.FromResult<T>(default!);
         }
     }

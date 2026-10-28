@@ -3,9 +3,10 @@ namespace Photobooth.Server;
 /// <summary>
 /// What the guest screen puts in front of a guest at the end of a session.
 ///
-/// Two codes, because there are two steps and the first is the one that loses
-/// people: a phone cannot open a page on the booth until it is on the booth's
-/// network.
+/// Two codes exist, because a phone cannot open a page on the booth until it is
+/// on the booth's network and no single QR does both. The join code is printed
+/// on a sign by the queue (Settings shows it), so a guest is already on the
+/// network by the end and the screen shows only the photos code.
 /// </summary>
 /// <param name="Enabled">Whether guests are being served their photos at all.</param>
 /// <param name="JoinWifi">

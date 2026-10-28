@@ -102,14 +102,10 @@ export function Claim() {
       )}
 
       {board.ssid && (
-        <figure className="claim__join">
-          <img src="/api/guest-gallery/qr?target=join" alt="" />
-          <figcaption>
-            Not on the wifi yet? Scan to join
-            <br />
-            <span className="handout__ssid">{board.ssid}</span>
-          </figcaption>
-        </figure>
+        <p className="claim__join">
+          Not on the wifi yet? Join <span className="handout__ssid">{board.ssid}</span>
+          {' '}— the code is on the sign by the queue
+        </p>
       )}
     </div>
   )

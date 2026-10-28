@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Photobooth.Delivery;
 
 namespace Photobooth.Server;
 
@@ -37,7 +37,6 @@ namespace Photobooth.Server;
 /// <item>SHA-256, and RSA 2048 or better</item>
 /// </list>
 /// </summary>
-[SupportedOSPlatform("windows")]
 public sealed class BoothCertificates
 {
     /// <summary>Apple's cap is 398. A day short of it avoids any rounding argument.</summary>
@@ -70,8 +69,9 @@ public sealed class BoothCertificates
     /// <summary>
     /// Load the booth's root, creating one the first time.
     ///
-    /// The private key is encrypted for this Windows user: a local root that can
-    /// be copied off a laptop is a root that can impersonate the booth to every
+    /// The private key is protected by <see cref="SecretProtector"/> -- encrypted
+    /// for this Windows user, or owner-only on a Mac: a local root that can be
+    /// copied off a laptop is a root that can impersonate the booth to every
     /// device trusting it.
     /// </summary>
     public static BoothCertificates Load(string dataFolder)
@@ -83,8 +83,7 @@ public sealed class BoothCertificates
         {
             try
             {
-                var pfx = ProtectedData.Unprotect(
-                    File.ReadAllBytes(path), Entropy, DataProtectionScope.CurrentUser);
+                var pfx = SecretProtector.Read(path, Entropy);
 
                 var existing = X509CertificateLoader.LoadPkcs12(
                     pfx, null, X509KeyStorageFlags.Exportable);
@@ -105,12 +104,7 @@ public sealed class BoothCertificates
         }
 
         var created = CreateAuthority();
-        File.WriteAllBytes(
-            path,
-            ProtectedData.Protect(
-                created.Export(X509ContentType.Pfx),
-                Entropy,
-                DataProtectionScope.CurrentUser));
+        SecretProtector.Write(path, created.Export(X509ContentType.Pfx), Entropy);
 
         return new BoothCertificates(created);
     }
@@ -178,7 +172,7 @@ public sealed class BoothCertificates
     public static IReadOnlyList<string> DnsNames()
     {
         var host = Environment.MachineName;
-        return [host, $"{host}.local", "localhost"];
+        return [.. new[] { host, $"{host}.local", PreferredHost(), "localhost" }.Distinct()];
     }
 
     /// <summary>Every IPv4 address this machine currently answers on.</summary>
@@ -218,7 +212,28 @@ public sealed class BoothCertificates
     /// What to point an iPad at. The mDNS name rather than a number, so the URL
     /// printed on the Setup page keeps working at the next venue.
     /// </summary>
-    public static string PreferredHost() => $"{Environment.MachineName}.local";
+    public static string PreferredHost() => HostFor(Environment.MachineName);
+
+    /// <summary>
+    /// The mDNS name for a machine name. A Mac may report its name with the
+    /// <c>.local</c> already on it, or with spaces from "Juan's MacBook Pro"
+    /// (Bonjour spells that <c>Juans-MacBook-Pro.local</c>), and either would
+    /// make a link that does not resolve.
+    /// </summary>
+    internal static string HostFor(string machineName)
+    {
+        var name = machineName.Trim();
+        if (name.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+        {
+            name = name[..^".local".Length];
+        }
+
+        var cleaned = new string([.. name
+            .Replace(' ', '-')
+            .Where(c => char.IsAsciiLetterOrDigit(c) || c == '-')]);
+
+        return $"{(cleaned.Length > 0 ? cleaned : "booth")}.local";
+    }
 
     private static X509Certificate2 CreateAuthority()
     {

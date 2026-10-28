@@ -40,3 +40,30 @@ jobs:
 
       - name: Test
         run: dotnet test --configuration Release --logger "console;verbosity=minimal"
+
+  # The booth also runs on a MacBook, so the suite has to pass there too -- this
+  # is what catches a Windows-only call (DPAPI was one) creeping back in.
+  build-and-test-macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/Photobooth.Web/package-lock.json
+
+      - name: Build the frontend
+        working-directory: src/Photobooth.Web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Test
+        run: dotnet test --configuration Release --logger "console;verbosity=minimal"

@@ -1,0 +1,120 @@
+name: Release (macOS)
+
+# The Apple Silicon build of the booth, for running it on a MacBook. It fires on
+# the same tags as the Windows release and attaches its own ZIP to the same
+# GitHub release, so one tag produces both.
+#
+# ffmpeg is not bundled: an LGPL build for the Mac is not as easy to come by as
+# the Windows one, and the Mac's own H.264 encoder (VideoToolbox) is in every
+# build. The setup guide asks for `brew install ffmpeg`.
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'phase-*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/Photobooth.Web/package-lock.json
+
+      - name: Build the frontend
+        working-directory: src/Photobooth.Web
+        run: |
+          npm ci
+          npm run build
+
+      # Installed before the tests so the one that runs the real encoder runs
+      # instead of skipping, and refuses a build whose ffmpeg cannot do H.264.
+      - name: Get ffmpeg
+        run: |
+          brew install ffmpeg
+          ffmpeg -hide_banner -encoders | grep -E 'h264_videotoolbox|libx264'
+
+      - name: Test
+        run: dotnet test --configuration Release --logger "console;verbosity=minimal"
+
+      # The tag is the version; see release.yml for why.
+      - name: Publish self-contained
+        run: |
+          args=(publish src/Photobooth.Server
+                --configuration Release
+                --runtime osx-arm64
+                --self-contained true
+                -p:PublishSingleFile=true
+                -p:EnableCompressionInSingleFile=true
+                -p:IncludeNativeLibrariesForSelfExtract=true
+                --output artifacts/publish)
+          if [[ "$GITHUB_REF_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            args+=("-p:Version=${BASH_REMATCH[1]}")
+          fi
+          dotnet "${args[@]}"
+
+      # A build that cannot run a mock session is useless to a field tester.
+      - name: Smoke test the published build
+        run: |
+          for dir in samples wwwroot templates; do
+            count=$(find "artifacts/publish/$dir" -type f | wc -l | tr -d ' ')
+            [[ "$count" -gt 0 ]] || { echo "artifacts/publish/$dir is empty"; exit 1; }
+            echo "$dir has $count file(s)"
+          done
+
+          cd artifacts/publish
+          ./Photobooth.Server &
+          pid=$!
+          cleanup() { kill "$pid" 2>/dev/null || true; sleep 1; rm -rf data; }
+          trap cleanup EXIT
+
+          ready=0
+          for _ in $(seq 1 40); do
+            sleep 0.5
+            if curl -fsS -m 2 http://localhost:5000/api/state >/dev/null; then ready=1; break; fi
+          done
+          [[ "$ready" -eq 1 ]] || { echo "the published app never started"; exit 1; }
+
+          press=$(curl -fsS -X POST 'http://localhost:5000/api/mock/press?mode=Normal')
+          echo "$press" | grep -q '"file"' || { echo "mock press produced no file"; exit 1; }
+          sleep 3
+          curl -fsS http://localhost:5000/api/diagnostics | grep -q '"Accepted"' \
+            || { echo "the photo was never ingested"; exit 1; }
+
+          for page in /operator /display /diagnostics; do
+            curl -fsS -m 5 -o /dev/null "http://localhost:5000$page" || { echo "$page failed"; exit 1; }
+          done
+          echo "all pages served"
+
+      - name: Package
+        run: |
+          name="photobooth-${GITHUB_REF_NAME}-macos-arm64"
+          for doc in FIELD-TEST DRIVE-SETUP QA-CHECKLIST IPAD-DISPLAY GUEST-PHOTOS EVENT-SETUP WEDNESDAY-TEST TESTING-GUEST-PHOTOS; do
+            cp "docs/$doc.md" artifacts/publish/ 2>/dev/null || true
+          done
+          cp appsettings.Local.example.json artifacts/publish/ 2>/dev/null || true
+          chmod +x artifacts/publish/Photobooth.Server
+          (cd artifacts/publish && zip -qr "../$name.zip" .)
+          echo "ASSET=artifacts/$name.zip" >> "$GITHUB_ENV"
+
+      - name: Attach to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET }}
+          generate_release_notes: false
+          fail_on_unmatched_files: true

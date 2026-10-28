@@ -702,7 +702,7 @@ public static class SettingsEndpoints
             return "The folder cannot be blank.";
         }
 
-        var expanded = Environment.ExpandEnvironmentVariables(folder.Trim());
+        var expanded = ExpandHome(Environment.ExpandEnvironmentVariables(folder.Trim()));
 
         // Tested on the input, not on the result. GetFullPath resolves a relative
         // path against the app's own folder, so "Pictures" would come back rooted
@@ -710,7 +710,7 @@ public static class SettingsEndpoints
         if (!Path.IsPathRooted(expanded))
         {
             resolved = expanded;
-            return "Use a full path, for example C:\\Users\\you\\Pictures\\Booth.";
+            return $"Use a full path, for example {ExampleFolder}.";
         }
 
         try
@@ -729,7 +729,7 @@ public static class SettingsEndpoints
                 if (!create)
                 {
                     // Saving will create it -- but only if it *can* be created.
-                    // Reporting "usable" for a missing drive or a folder Windows
+                    // Reporting "usable" for a missing drive or a folder the OS
                     // will refuse would make the check worse than useless.
                     return CanBeCreated(resolved);
                 }
@@ -745,7 +745,7 @@ public static class SettingsEndpoints
         }
         catch (UnauthorizedAccessException)
         {
-            return "Windows will not let this app write there. Pick a folder inside your user profile.";
+            return "The system will not let this app write there. Pick a folder inside your user folder.";
         }
         catch (Exception ex)
         {
@@ -758,7 +758,7 @@ public static class SettingsEndpoints
     ///
     /// Walks up to the nearest ancestor that does exist and tests writing there.
     /// That is what separates "will be created when you save" from a missing
-    /// drive letter or a folder Windows will refuse without admin rights.
+    /// drive letter or a folder the OS will refuse without admin rights.
     /// </summary>
     private static string? CanBeCreated(string resolved)
     {
@@ -783,13 +783,32 @@ public static class SettingsEndpoints
         }
         catch (UnauthorizedAccessException)
         {
-            return $"Windows will not let this app create folders in {ancestor.FullName}. " +
-                   "Pick somewhere inside your user profile.";
+            return $"The system will not let this app create folders in {ancestor.FullName}. " +
+                   "Pick somewhere inside your user folder.";
         }
         catch (Exception ex)
         {
             return $"That folder cannot be created: {ex.Message}";
         }
+    }
+
+    private static string ExampleFolder => OperatingSystem.IsWindows()
+        ? "C:\\Users\\you\\Pictures\\Booth"
+        : "/Users/you/Pictures/Booth";
+
+    /// <summary>
+    /// <c>~</c> and <c>~/</c> mean the user's folder. A Mac user types them
+    /// without thinking, and a path starting with one is otherwise "not rooted".
+    /// </summary>
+    private static string ExpandHome(string path)
+    {
+        if (path != "~" && !path.StartsWith("~/", StringComparison.Ordinal))
+        {
+            return path;
+        }
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return string.IsNullOrEmpty(home) ? path : home + path[1..];
     }
 
     private static string[] Suggestions()

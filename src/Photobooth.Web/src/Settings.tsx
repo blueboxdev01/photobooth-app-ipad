@@ -99,6 +99,12 @@ interface FolderCheck {
 
 type Status = { ok: boolean; text: string } | null
 
+// The console is opened in a browser on the booth machine itself, so the
+// browser's platform is the booth's, which is what the example paths follow.
+const ON_WINDOWS = /Win/i.test(navigator.platform)
+const SEP = ON_WINDOWS ? '\\' : '/'
+const PICTURES = ON_WINDOWS ? 'C:\\Users\\you\\Pictures' : '/Users/you/Pictures'
+
 /**
  * Booth setup.
  *
@@ -109,8 +115,8 @@ type Status = { ok: boolean; text: string } | null
  * and strip together.
  *
  * There is no folder picker: browsers will not hand a web page a filesystem
- * path. Paste it from EOS Utility's save-location setting, or Explorer's address
- * bar.
+ * path. Paste it from EOS Utility's save-location setting, or from Explorer's
+ * address bar (Windows) or Finder's "Copy as Pathname" (Mac).
  */
 export function Settings({ onChanged }: { onChanged?: () => void }) {
   const [data, setData] = useState<SettingsResponse | null>(null)
@@ -240,7 +246,7 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
         <label className="settings__folder">
           Watch folder — where EOS Utility saves
           <input value={watch} spellCheck={false}
-                 placeholder="C:\Users\you\Pictures\Tethered"
+                 placeholder={`${PICTURES}${SEP}Tethered`}
                  onChange={(e) => { setWatch(e.target.value); setCheck(null) }} />
         </label>
         <div className="controls">
@@ -258,7 +264,7 @@ export function Settings({ onChanged }: { onChanged?: () => void }) {
         <label className="settings__folder">
           Output folder — finished sessions, one subfolder per guest
           <input value={output} spellCheck={false}
-                 placeholder="C:\Users\you\Pictures\Photobooth"
+                 placeholder={`${PICTURES}${SEP}Photobooth`}
                  onChange={(e) => { setOutput(e.target.value); setCheck(null) }} />
         </label>
         <div className="controls">
@@ -743,9 +749,10 @@ function GuestGallery({
       {g.enabled ? (
         <>
           <p className="muted small">
-            At the end of a session the guest screen shows two codes: one to join
-            your wifi, one to open their own photos. Fill in the network so the
-            first code works &mdash; it is your router, not the booth&rsquo;s.
+            At the end of a session the guest screen shows one code, to open their
+            own photos, with the wifi name beside it. Guests join the wifi from a
+            sign by the queue: fill in the network below, then print the code
+            beside it &mdash; it is your router, not the booth&rsquo;s.
           </p>
 
           <div className="fields">
@@ -770,6 +777,17 @@ function GuestGallery({
               Save wifi details
             </button>
           </div>
+
+          {g.ssid && (
+            <figure className="settings__sign">
+              <img src="/api/guest-gallery/qr?target=join" alt="Join-wifi QR code" />
+              <figcaption className="muted small">
+                Print this for the sign by the queue. Scanning it joins{' '}
+                <code>{g.ssid}</code> without typing the password. Put the name and
+                password in words beside it too.
+              </figcaption>
+            </figure>
+          )}
 
           {g.preferredMissing && (
             <p className="banner">
@@ -831,7 +849,7 @@ function GuestGallery({
                   is any screen opened at <code>/claim</code> (same address and port as
                   the guest display). It keeps showing a guest for five minutes after
                   they finish, even while the next one is posing.</>
-              : <>Off: the guest screen shows both codes itself at the end of a session.
+              : <>Off: the guest screen shows the photos code itself at the end of a session.
                   Turn this on if guests collect from a second screen.</>}
           </p>
 

@@ -198,7 +198,7 @@ address.
 ### C2. A wifi name that does not exist
 
 1. In Setup, set the **wifi network** to `NotARealNetwork`. Save.
-2. Run a session and scan the join code with the phone.
+2. Scan the join code on Settings (the one printed for the queue sign) with the phone.
 
 **Expect:** the phone does nothing, or says it cannot find the network. This is
 the documented top failure, and the point is to recognise the symptom — *a code

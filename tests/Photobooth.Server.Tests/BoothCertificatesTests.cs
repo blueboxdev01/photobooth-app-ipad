@@ -74,8 +74,22 @@ public sealed class BoothCertificatesTests : IDisposable
     [Fact]
     public void The_preferred_host_is_the_mdns_name()
     {
-        Assert.Equal($"{Environment.MachineName}.local", BoothCertificates.PreferredHost());
+        Assert.Equal(BoothCertificates.HostFor(Environment.MachineName), BoothCertificates.PreferredHost());
         Assert.Contains(BoothCertificates.PreferredHost(), BoothCertificates.DnsNames());
+    }
+
+    /// <summary>
+    /// A Mac's machine name can already end in .local or contain spaces, and
+    /// either would make an iPad link that does not resolve.
+    /// </summary>
+    [Theory]
+    [InlineData("BOOTH-LAPTOP", "BOOTH-LAPTOP.local")]
+    [InlineData("Edwards-MacBook-Neo.local", "Edwards-MacBook-Neo.local")]
+    [InlineData("Juan's MacBook Pro", "Juans-MacBook-Pro.local")]
+    [InlineData("  ", "booth.local")]
+    public void The_mdns_name_is_made_from_whatever_the_machine_is_called(string machine, string expected)
+    {
+        Assert.Equal(expected, BoothCertificates.HostFor(machine));
     }
 
     [Fact]
@@ -226,6 +240,15 @@ public sealed class BoothCertificatesTests : IDisposable
         Load();
 
         var file = Directory.EnumerateFiles(_folder, "booth-ca.*").Single();
+
+        if (!OperatingSystem.IsWindows())
+        {
+            // No DPAPI here, so the protection is the file's permissions.
+            Assert.Equal(
+                UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(file));
+            return;
+        }
+
         var raw = File.ReadAllBytes(file);
 
         // A PKCS#12 blob starts with an ASN.1 SEQUENCE. Encrypted at rest, it

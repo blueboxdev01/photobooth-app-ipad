@@ -92,6 +92,15 @@ public sealed class DpapiTokenStoreTests : IDisposable
         await store.StoreAsync("booth", ATokenResponse());
 
         var file = Directory.EnumerateFiles(_folder, "drive-token-*.bin").Single();
+
+        if (!OperatingSystem.IsWindows())
+        {
+            // No DPAPI here, so the protection is the file's permissions.
+            Assert.Equal(
+                UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(file));
+            return;
+        }
+
         var raw = await File.ReadAllBytesAsync(file);
 
         Assert.DoesNotContain("refresh-abc", System.Text.Encoding.UTF8.GetString(raw));

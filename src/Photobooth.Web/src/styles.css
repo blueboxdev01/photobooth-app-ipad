@@ -505,6 +505,7 @@ a.button, .btn.button {
   display: inline-block; margin-top: 4px; font-family: var(--mono);
   font-size: .9em; color: rgba(255, 255, 255, .72);
 }
+.handout__hint { font-size: .8em; font-weight: 400; color: rgba(255, 255, 255, .72); }
 
 /* The two-step iPad setup, side by side so the order is obvious. */
 .ipad { display: flex; gap: 18px; flex-wrap: wrap; margin: 12px 0 4px; }
@@ -655,12 +656,14 @@ a.button, .btn.button {
   margin: 0; font-size: clamp(18px, 2.4vw, 28px); color: rgba(255, 255, 255, .78);
   max-width: 14em; text-align: center;
 }
-/* Sending the guest on to the claiming station: one big line, with the join code
-   small beside it for whoever is still queuing. */
+/* Sending the guest on to the claiming station: one big line, with the network
+   name beside it for whoever is still queuing. */
 .handout--station { align-items: center; flex-wrap: wrap; justify-content: center; }
 .handover__note--big { font-size: clamp(24px, 3.6vw, 44px); color: #fff; max-width: 12em; }
-.handout__step--small img { width: min(18vh, 170px); padding: 10px; }
-.handout__step--small figcaption { font-size: clamp(13px, 1.4vw, 17px); }
+.handout__join {
+  margin: 0; text-align: center; color: rgba(255, 255, 255, .9);
+  font-size: clamp(15px, 1.9vw, 22px); font-weight: 600;
+}
 
 /* The claiming station. The newest guest is large; anyone who has not collected
    yet is kept below, smaller, so two guests finishing close together do not
@@ -680,11 +683,7 @@ a.button, .btn.button {
   width: min(16vh, 150px); height: auto; background: #fff; padding: 8px;
   border-radius: 8px; image-rendering: pixelated;
 }
-.claim__join { margin: 0; display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, .8); font-size: 15px; }
-.claim__join img {
-  width: 84px; height: auto; background: #fff; padding: 6px; border-radius: 8px;
-  image-rendering: pixelated;
-}
+.claim__join { margin: 0; text-align: center; color: rgba(255, 255, 255, .8); font-size: 15px; }
 .claim__warn {
   margin: 0; padding: 6px 14px; border-radius: 999px; font-size: 14px;
   background: rgba(255, 255, 255, .12); color: #ffd7a8;
@@ -1116,3 +1115,12 @@ a.button, .btn.button {
 @media (max-width: 1000px) {
   .console { grid-template-columns: 1fr; }
 }
+
+/* The join-wifi code on the Settings page: shown at a printable size on a white
+   plate, since the operator prints or screenshots it for the queue sign. */
+.settings__sign { margin: 12px 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.settings__sign img {
+  width: 180px; height: auto; background: #fff; padding: 10px; border-radius: 8px;
+  image-rendering: pixelated;
+}
+.settings__sign figcaption { max-width: 28em; margin: 0; }

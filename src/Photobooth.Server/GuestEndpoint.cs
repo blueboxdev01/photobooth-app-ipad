@@ -101,8 +101,9 @@ public static class GuestEndpoint
         "/api/photos/",
         "/api/settings/display-background",
 
-        // The guest screen shows the join code and the photos code at the end of
-        // a session, so it has to be able to fetch them.
+        // The guest screen shows the photos code at the end of a session, so it
+        // has to be able to fetch it. The join code is served by the same endpoint
+        // but is only used from the Settings page, for the queue sign.
         "/api/guest-gallery/qr",
     ];
 
