@@ -141,6 +141,21 @@ public sealed class WatchFolderCameraTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Accepts_a_photo_filed_in_a_dated_subfolder()
+    {
+        Build();
+        await _camera.ConnectAsync();
+
+        // What EOS Utility does by default: <destination>/<yyyy_MM_dd>/IMG_0001.JPG.
+        var dated = Path.Combine(WatchDir, "2026_10_28");
+        Directory.CreateDirectory(dated);
+        File.Copy(Path.Combine(SampleDir, "sample-1.jpg"), Path.Combine(dated, "IMG_0001.JPG"));
+
+        Assert.True(await WaitForPhotosAsync(1), $"no photo accepted; saw {AcceptedCount}");
+        Assert.Equal("IMG_0001.JPG", Accepted.Single().FileName);
+    }
+
+    [Fact]
     public async Task Does_not_accept_a_file_while_it_is_still_being_written()
     {
         // 240 KB in 16 KB chunks at 20 ms each is roughly 300 ms of writing, so a

@@ -217,6 +217,19 @@ public static class SettingsEndpoints
                     });
                 }
 
+                // The watch folder is scanned including its subfolders, so an
+                // output folder inside it would have its own strips ingested.
+                var watchPrefix = watchAfter.TrimEnd(Path.DirectorySeparatorChar)
+                                + Path.DirectorySeparatorChar;
+                if (resolved.StartsWith(watchPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "The output folder must not be inside the watch folder, or "
+                              + "finished strips would be picked up as new photos.",
+                    });
+                }
+
                 settings.OutputFolder = newOutputFolder = resolved;
             }
 

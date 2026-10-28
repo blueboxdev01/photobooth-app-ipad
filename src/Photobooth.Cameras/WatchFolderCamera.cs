@@ -127,7 +127,10 @@ public sealed class WatchFolderCamera : ICameraDevice
         _watcher = new FileSystemWatcher(folder)
         {
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.LastWrite,
-            IncludeSubdirectories = false,
+            // EOS Utility files each day's shots under a dated subfolder
+            // (2026_10_28/IMG_0001.JPG) unless told not to, so the top level of
+            // the folder it was pointed at stays empty.
+            IncludeSubdirectories = true,
             EnableRaisingEvents = true,
         };
 
@@ -337,6 +340,12 @@ public sealed class WatchFolderCamera : ICameraDevice
             e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static readonly EnumerationOptions SubfolderScan = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = true,
+    };
+
     private async Task SweepAsync(CancellationToken token)
     {
         // FileSystemWatcher misses events when many files land at once. Re-scanning
@@ -348,7 +357,8 @@ public sealed class WatchFolderCamera : ICameraDevice
             try
             {
                 await Task.Delay(delay, _time, token).ConfigureAwait(false);
-                foreach (var path in Directory.EnumerateFiles(WatchFolderPath))
+                foreach (var path in Directory.EnumerateFiles(
+                    WatchFolderPath, "*", SubfolderScan))
                 {
                     Offer(path);
                 }
