@@ -4,6 +4,14 @@ The iPad replaces the external monitor: it shows the countdown, the shots as
 they are taken, the review, and the finished strip with the QR code for
 downloading it.
 
+> **Since v0.20.0 the iPad needs no certificate.** The display no longer runs a
+> camera, so it is served over plain http: switch on **Serve the display to an
+> iPad**, restart, and open `http://<booth>.local:5001/display` on the iPad (or scan
+> the code on Settings). Set **Auto-Lock: Never**, since Safari cannot hold the
+> screen on over plain http. Sections 2 and the certificate parts below are only
+> for an iPad still using the older `https://...:5002/display` address. The short
+> version is [EVENT-SETUP.md](EVENT-SETUP.md) section 1b.
+
 **Twenty minutes the first time**, most of it on the iPad. After that, starting a
 booth is opening one page.
 

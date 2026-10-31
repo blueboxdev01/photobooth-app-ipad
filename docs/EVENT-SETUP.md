@@ -1,6 +1,10 @@
 # Setting up the photobooth, start to finish
 
-For build **v0.19.2** or newer. Follow it top to bottom the first time; after that
+> **Setting up the current layout (Mac booth, iPad preview, Windows claiming
+> station)? Use [SETUP-GUIDE.md](SETUP-GUIDE.md)**, a complete step-by-step guide for
+> it. This page also covers the older layouts.
+
+For build **v0.20.0** or newer. Follow it top to bottom the first time; after that
 the checklist in section 10 is all you need on the day.
 
 **Allow about two hours the first time**, most of it the camera and the router.
@@ -37,73 +41,90 @@ sessions are all on the Windows laptop.
 
 ---
 
-## 1b. The current setup: Mac booth, preview monitor, Windows claiming station
+## 1b. The current setup: Mac booth, iPad preview, Windows claiming station
 
-This is how the booth is run now. The rest of this guide still applies for the router, the
-camera and the Mac, but **where it says iPad, read the monitor on the Mac, and where it says the
-Windows laptop is the booth, read the MacBook.**
+This is how the booth is run now (v0.20.0 or newer). The rest of this guide still applies for the
+router and the camera; where it says the Windows laptop is the booth, read **the MacBook**.
 
 ```
  Canon R50 --USB--> MACBOOK --cable/wifi--> ROUTER (WAN empty) <--wifi-- guests' phones
  (BR-E1 remote)     booth app, EOS Utility,        ^
- [external monitor] all the sessions, shared       |-- Windows laptop  /pickup  the claiming station
-  = guest screen    over SMB                       '-- (reads the Mac's shared sessions folder)
+                    every photo, all settings,     |-- iPad            http://<mac>.local:5001/display
+                    sessions folder shared         |                   the guest preview
+                    over SMB                       '-- Windows laptop  /pickup + /pickup/screen
+                                                        [external monitor = guest QR screen]
 ```
 
 | Device | Job |
 |---|---|
-| **MacBook** | The whole booth. Takes the photos, builds each guest's strip, stores everything, and **shares its sessions folder**. Staff press Accept here |
-| **External monitor on the Mac** | The guest screen. Shows the countdown, the strip, then the guest's **number** |
-| **Windows laptop** | The **claiming station**. Reads the Mac's shared folder and shows a grid of every guest by number. Serves the download page to phones |
-| **Router** | The only network, no internet on it |
+| **MacBook** | The main computer. Takes the photos, builds each strip, stores everything, holds **every setting** (layout, wifi, timings), and shares its sessions folder. Staff press **Accept** or **Retake** here |
+| **iPad** | The guest preview. No mirror: a countdown, each photo **large for 2 seconds** as it lands, then the **strip**, then the guest's **number**. View only |
+| **Windows laptop** | The claiming station. Reads the Mac's shared folder. The operator uses `/pickup` on the laptop screen; the **external monitor** faces the guest and shows `/pickup/screen` |
+| **Router** | The only network. No internet on it, on purpose |
 
 ### How a guest moves through it
 
 1. **Queue.** A sign shows the join-wifi QR; they join the booth wifi while they wait.
-2. **Centre stage.** They frame on the camera's viewfinder; staff press the BR-E1 for each shot (4 shots). The monitor counts down.
-3. **Preview and Accept.** The monitor shows their strip. Staff press **Accept** on the Mac.
-4. **A number.** The monitor shows a large **number** (1, 2, 3, restarting each day). The same number is stamped on the strip.
-5. **Claim.** The guest goes to the Windows laptop and says their number. The operator types it in the **Claiming Station** page, hovers the guest's strip, clicks **Show QR**, and the guest scans it to download **4 photos, the strip and the video**.
+2. **Centre stage.** They frame on the camera's viewfinder. The iPad counts down; staff press the BR-E1 for each shot. Each photo fills the iPad for 2 seconds, with the next count in the corner.
+3. **Preview and Accept.** The iPad shows their strip. Staff press **Accept** on the Mac (or **Retake this one**).
+4. **A number.** The iPad shows a large **number** (1, 2, 3, restarting each day), also stamped on the strip.
+5. **Claim.** At the Windows laptop the guest says their number. The operator types it on `/pickup` and clicks the guest's strip. The **external monitor** shows that guest's strip and QR; the guest scans it and downloads **their photos, the strip and the video**. Press **Esc** (or **Clear the screen**) when they are done; it also clears itself after 3 minutes.
 
-### Set up the Mac (the booth)
+### Set up the Mac (the main computer)
 
-1. Everything in the Mac section below (EOS Utility, `brew install ffmpeg`, the app).
+1. EOS Utility, `brew install ffmpeg` and the app, as in the Mac section below.
 2. **Settings** on the Mac:
-   - **Guest photos over your wifi**: switch on **Let guests download their photos**, enter the wifi name and password, and press **Save wifi details** (this prints the queue-sign QR too).
-   - Press **Hand over by number**. (This is what gives each guest a number and puts it on the strip and the monitor.)
-   - Leave **Use a separate claiming station** off. The Windows laptop does not use it.
-   - **Photos per strip: 4.** See the note below about the frame art.
-3. **Share the sessions folder.** System Settings > General > Sharing > **File Sharing**: add the booth's **Output folder** (shown on Settings, usually `.../data/sessions` beside the app) as a shared folder, and give the Windows laptop's user **Read & Write** (the app only reads, but Settings' *Check* button tests by writing a file). Note the Mac's address, for example `smb://192.168.8.101`.
-4. **The monitor.** Run `tools/mac-display.command --local` (or open `http://localhost:5000/display`) on the external monitor, fullscreen. No iPad, certificate or HTTPS is needed any more.
-5. The Mac must **never sleep**: System Settings > Lock Screen > display off **Never**, power connected, lid open (or use the external display with the lid closed and keep the Mac awake).
+   - **Guest photos over your wifi**: switch on **Let guests download their photos**, enter the wifi name and password, and press **Save wifi details**. This also prints the queue-sign QR. **The Windows laptop takes these from the Mac**, so this is the only place to type them.
+   - Press **Hand over by number**.
+   - Leave **Use a separate claiming station** off.
+   - **Guest display on an iPad**: press **Serve the display to an iPad**, then **restart the app**.
+   - **Photos per strip**, output size and timings as the event needs.
+3. **Share the sessions folder.** System Settings > General > Sharing > **File Sharing**: add the booth's **Output folder** (shown on Settings) as a shared folder, and give the Windows laptop's user **Read & Write**. Note the Mac's address, for example `smb://192.168.8.101`.
+4. The Mac must **never sleep**: System Settings > Lock Screen > display off **Never**, power connected, lid open.
+
+### Set up the iPad (the preview)
+
+No certificate and nothing to install.
+
+1. Join the booth wifi.
+2. Scan the QR under **Settings > Guest display on an iPad** on the Mac, or type `http://<Mac name>.local:5001/display` (the Mac's name with spaces as hyphens, for example `Juans-MacBook-Neo.local`; the Mac's IP address works too).
+3. **Share > Add to Home Screen**, then open it from that icon.
+4. **Settings > Display & Brightness > Auto-Lock: Never.** Over plain http Safari cannot keep the screen on by itself. Optionally **Guided Access** so a guest cannot leave the page.
+5. Stand it beside the camera, facing centre stage. It should read *Step in and smile*.
 
 ### Set up the Windows laptop (the claiming station)
 
 1. Install the Windows build as in section 5.
-2. **Connect to the Mac's share**: File Explorer > address bar `\\<Mac address>\<share name>`, sign in as the Mac user, tick **Remember my credentials**. Map it to a drive letter (right-click > Map network drive, **Reconnect at sign-in**) so it is still there after a restart.
+2. **Connect to the Mac's share**: File Explorer > address bar `\\<Mac address>\<share name>`, sign in as the Mac user, tick **Remember my credentials**, then Map network drive with **Reconnect at sign-in**.
 3. Open `http://localhost:5000/diagnostics` (Settings) on the Windows laptop and set:
-   - **Output folder**: the shared folder (e.g. `Z:\` or `\\192.168.8.101\Photobooth`). Press **Check**, then **Save**.
-   - **Guest photos over your wifi**: **Let guests download their photos**, the **same wifi name and password**, and **Guests reach the booth at**: this laptop's address **on the router** (not another network).
-   - **Serve the display to the network**: on. This is what opens the port phones use to download. (The iPad certificate is not used.)
-   - **This computer is the claiming station only**: on. **Restart the app** afterwards.
+   - **Output folder**: the shared folder (e.g. `Z:\`). **Check**, then **Save**.
+   - **This computer is the claiming station only**: on.
+   - **Serve the display to the network**: on. This opens the port guests' phones download from.
+   - **Guests reach the booth at**: this laptop's address **on the router**.
+   - **Restart the app.** The wifi section should now say *Wifi details come from the booth computer*. You do not type the wifi name or password here.
 4. Allow `Photobooth.Server` on **Private networks** when Windows Firewall asks.
-5. Open `http://localhost:5000/pickup`. After a guest is accepted on the Mac, their number appears here within a few seconds.
+5. **Two screens.** Set Windows to **Extend** the displays (Win+P > Extend), not Duplicate.
+   - Laptop screen: `http://localhost:5000/pickup`. This is the operator's: every guest of the day.
+   - External monitor, facing the guests: `http://localhost:5000/pickup/screen`, fullscreen (drag the window over and press **F11**). It shows *Collect your photos here* until the operator picks a guest.
 
 ### Check it
 
-- [ ] A test guest on the Mac gets a number; the monitor shows it large with no QR; `strip.jpg` has *No. N* at the foot.
+- [ ] The iPad opens the display over `http://` with no certificate warning and reads *Step in and smile*.
+- [ ] A test guest on the Mac: each photo shows large on the iPad, then the strip, then a **number**.
 - [ ] That number appears on the Windows laptop's **Claiming Station** within about 3 seconds.
-- [ ] Type the number: only that guest remains. Hover their strip: **Show QR** appears. Click: a large QR.
-- [ ] A phone on the booth wifi scans it and opens a page with **4 photos, the strip and the video**, and **Download all** works.
-- [ ] The next guest gets the next number; restart the Mac's booth app, and the one after that carries on (it does not repeat a number).
+- [ ] Type the number and click the strip: the **external monitor** shows that strip and a large QR; the laptop tile says *On the guest screen*.
+- [ ] A phone on the booth wifi scans it and opens their photos, strip and video; **Download all** works.
+- [ ] Press **Esc** on the laptop: the monitor goes back to *Collect your photos here*.
+- [ ] Change the wifi password on the Mac's Settings: within a few seconds the Windows Settings page shows the change.
 
 ### Things to know
 
-- **Numbers restart each day.** The claiming station has a **Day** picker (it defaults to today). To start again from 1 in the middle of a day, delete the test sessions' folders from the Output folder and restart the Mac's booth app.
-- **The Mac must be on** for the Windows laptop to see new guests. Download pages are served by the Windows laptop, from the shared folder, so a guest can only download while **both** are on and on the wifi.
-- **4 photos and the frame.** The shipped `classic-2x6` frame has three windows. Setting 4 photos per strip removes that frame art and gives a plain 4-photo strip with the number at the foot. A branded 4-window frame needs new art made for it (Templates).
-- **No video on the download page?** The Mac needs ffmpeg (`brew install ffmpeg`).
-- **The video is an MP4, not a GIF**, which is what Instagram and Facebook accept.
+- **Numbers restart each day.** The claiming station has a **Day** picker (it defaults to today).
+- **The Mac must be on** for the Windows laptop to see new guests. Downloads are served by the Windows laptop from the shared folder, so a guest can only download while **both** are on and on the wifi.
+- **The wifi password is in the shared folder** (`booth-settings.json`), in plain text, as it already is in the Mac's own `data/settings.json`. It is the guests' wifi; just do not share that folder beyond the station.
+- **The iPad cannot press Accept.** Only the Mac can accept, retake or abort; nothing on the wifi can change a session.
+- **An iPad set up with the old certificate** still works at its `https://...:5002/display` address; there is no need to redo it.
+- **4 photos and the frame.** The shipped `classic-2x6` frame has three windows. Four photos per strip needs 4-window art (Templates).
 
 ---
 
@@ -161,8 +182,8 @@ Do this first; everything else needs it.
 
 ### Install the booth
 
-1. Download **`photobooth-v0.19.2-win-x64.zip`**:
-   <https://github.com/blueboxdev01/photobooth-app-ipad/releases/download/v0.19.2/photobooth-v0.19.2-win-x64.zip>
+1. Download **`photobooth-v0.20.0-win-x64.zip`**:
+   <https://github.com/blueboxdev01/photobooth-app-ipad/releases/download/v0.20.0/photobooth-v0.20.0-win-x64.zip>
 2. Right-click the ZIP → **Properties** → tick **Unblock** if it is there → OK. Then **Extract All** to a folder you will keep, such as `C:\Photobooth` (not Downloads).
 3. Keep the `ffmpeg` folder where it is, beside the exe. It makes the guest video.
 4. Run **`Photobooth.Server.exe`**. If SmartScreen warns about an unsigned program, choose **More info → Run anyway**.
@@ -197,7 +218,7 @@ before the event.** Then:
 `brew install ffmpeg`. The booth finds it in `/opt/homebrew/bin` or `/usr/local/bin` and uses the
 Mac's own H.264 encoder.
 
-Then either download **`photobooth-v0.19.2-macos-arm64.zip`** from the releases
+Then either download **`photobooth-v0.20.0-macos-arm64.zip`** from the releases
 page, or build it on the Mac (needs the .NET 10 SDK and Node 22):
 
 ```bash
@@ -335,7 +356,7 @@ On the day, once everything is plugged in:
 | Remote does nothing | BR-E1 lost its pairing while tethered | Press the camera's own shutter; re-pair after the event |
 | iPad or Mac cannot load the page | Different network, or the booth was not restarted after switching the display on, or Windows Firewall | Same router? Restart the booth. Allow it on Private networks |
 | Browser warns the connection is not private | Certificate installed but not **trusted** | iPad: Certificate Trust Settings → on. Mac: Keychain → Always Trust |
-| iPad sits on *Connecting…* | A booth older than v0.12.2 | Use v0.19.2 |
+| iPad sits on *Connecting…* | A booth older than v0.12.2 | Use v0.20.0 |
 | The join-wifi QR scans and nothing happens | Wifi name in Settings is wrong, or the router is off | Match the name exactly, case included |
 | Joined, but the photos page never loads | Booth advertising the wrong address, or router isolating devices | Settings → *Guests reach the booth at*. Turn off the router's guest mode and client isolation |
 | The page loaded once then stopped (Android) | Phone switched back to mobile data | Rejoin the wifi and tell it to stay connected |

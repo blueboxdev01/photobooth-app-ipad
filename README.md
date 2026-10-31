@@ -8,10 +8,15 @@
 > Everything else below is unchanged from the main repo, which stays the build
 > being field-tested.
 >
-> **The booth computer can be a Windows laptop or a MacBook** (see
-> [docs/EVENT-SETUP.md](docs/EVENT-SETUP.md) section 5). At the end of a session
-> the guest screen shows **one** QR, for the guest's photos; the join-wifi QR is
-> printed on a sign by the queue (Settings shows it).
+> **The current layout** (v0.20.0, [docs/EVENT-SETUP.md](docs/EVENT-SETUP.md)
+> section 1b): a **MacBook** runs the booth and holds every setting; an **iPad**
+> previews each shot and the strip over plain http, with no certificate; a
+> **Windows laptop** with an external monitor is the claiming station, reading the
+> Mac's shared sessions folder and showing one guest's QR at a time on the
+> guest-facing monitor. All on a router with no internet.
+>
+> **Setting it up: [docs/SETUP-GUIDE.md](docs/SETUP-GUIDE.md)**, step by step from
+> the router to the end of the event.
 
 
 Photobooth software for a **Canon EOS R50**: EOS Utility saves tethered captures

@@ -16,14 +16,18 @@ public sealed class GuestDisplayOptions
     public bool Enabled { get; set; }
 
     /// <summary>
-    /// Plain HTTP, serving the root certificate and nothing else.
+    /// Plain HTTP: the guest display, guests' photo downloads, and the root
+    /// certificate.
     ///
-    /// It has to be plain: the iPad cannot fetch the root over the HTTPS that the
-    /// root is what makes trustworthy.
+    /// The display needed HTTPS only while it ran a camera for the posing mirror.
+    /// With the mirror gone an iPad opens it here with nothing to install.
     /// </summary>
     public int CertPort { get; set; } = 5001;
 
-    /// <summary>HTTPS, serving the guest display.</summary>
+    /// <summary>
+    /// HTTPS, serving the guest display, for an iPad set up before the display
+    /// moved to plain HTTP. Nothing needs it any more.
+    /// </summary>
     public int DisplayPort { get; set; } = 5002;
 
     /// <summary>
@@ -174,6 +178,22 @@ public static class GuestEndpoint
                     return;
                 }
 
+                // The bare address is what gets typed into an iPad, so it goes
+                // straight to the display it is for.
+                if (context.Request.Path.Equals("/"))
+                {
+                    context.Response.Redirect("/display");
+                    return;
+                }
+
+                // The guest display, over plain HTTP. It runs no camera any more,
+                // so it needs no secure context and the iPad no certificate.
+                if (IsGuestPath(context.Request.Path))
+                {
+                    await next();
+                    return;
+                }
+
                 await ServeCertificateSideAsync(context, options, certificates);
                 return;
             }
@@ -200,8 +220,9 @@ public static class GuestEndpoint
     }
 
     /// <summary>
-    /// The plain-HTTP port. It exists for one job -- handing an iPad the root
-    /// certificate before the iPad trusts anything -- and does nothing else.
+    /// The plain-HTTP port's certificate page, for a screen that still opens the
+    /// HTTPS address. Reached at <c>/setup</c>; the bare address now goes to the
+    /// display itself.
     /// </summary>
     private static async Task ServeCertificateSideAsync(
         HttpContext context, GuestDisplayOptions options, BoothCertificates certificates)
@@ -217,6 +238,8 @@ public static class GuestEndpoint
             return;
         }
 
+        var plain =
+            $"http://{BoothCertificates.PreferredHost()}:{options.CertPort}/display";
         var display =
             $"https://{BoothCertificates.PreferredHost()}:{options.DisplayPort}/display";
 
@@ -247,6 +270,9 @@ public static class GuestEndpoint
               small { color: #5b6270; }
             </style>
             <h1>Set this iPad up as the guest display</h1>
+            <p>No certificate is needed any more: open <a href="/display"><code>{{plain}}</code></a>
+               and add it to the Home Screen.</p>
+            <p><small>Only for the older HTTPS address:</small></p>
             <ol>
               <li><a class="btn" href="/cert">Install the booth certificate</a></li>
               <li>Open <b>Settings</b> and install the downloaded profile.</li>

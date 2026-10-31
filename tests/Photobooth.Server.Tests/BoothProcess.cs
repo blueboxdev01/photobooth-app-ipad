@@ -26,6 +26,9 @@ public sealed class BoothProcess : IAsyncLifetime
     public int CertPort { get; private set; }
     public int DisplayPort { get; private set; }
 
+    /// <summary>The folder this booth watches for the camera's files.</summary>
+    public string WatchFolder => Path.Combine(_data, "watch");
+
     public HttpClient Operator { get; private set; } = null!;
 
     /// <summary>
@@ -63,6 +66,22 @@ public sealed class BoothProcess : IAsyncLifetime
         start.Environment["GuestDisplay__DisplayPort"] = DisplayPort.ToString();
         start.Environment["Archive__Folder"] = Path.Combine(_data, "sessions");
         start.Environment["Camera__WatchFolder__Path"] = Path.Combine(_data, "watch");
+
+        // Its own settings too. Left beside the build, a folder chosen by hand in
+        // an earlier manual run outranks both of the paths above.
+        start.Environment["DataFolder"] = Path.Combine(_data, "data");
+
+        // And the shipped frame, fresh. The build's copy is the one the template
+        // editor saves over, so a layout changed by hand -- four photos, say --
+        // would leave every three-shot session here waiting for a fourth.
+        var templates = Path.Combine(_data, "templates");
+        Directory.CreateDirectory(templates);
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "templates")))
+        {
+            File.Copy(file, Path.Combine(templates, Path.GetFileName(file)));
+        }
+
+        start.Environment["Templates__Folder"] = templates;
 
         _process = Process.Start(start)
             ?? throw new InvalidOperationException($"Could not start {server}.");
@@ -132,6 +151,18 @@ public sealed class BoothProcess : IAsyncLifetime
     /// The built server, found from this test assembly's own output so it
     /// follows Debug and Release without being told which.
     /// </summary>
+    private static string RepositoryRoot()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "src")))
+        {
+            root = root.Parent;
+        }
+
+        return root?.FullName ?? throw new InvalidOperationException(
+            $"Could not find the repository root above {AppContext.BaseDirectory}.");
+    }
+
     private static string ServerBinary()
     {
         var here = new DirectoryInfo(AppContext.BaseDirectory);
@@ -140,20 +171,8 @@ public sealed class BoothProcess : IAsyncLifetime
         var tfm = here.Name;
         var configuration = here.Parent!.Name;
 
-        var root = here;
-        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "src")))
-        {
-            root = root.Parent;
-        }
-
-        if (root is null)
-        {
-            throw new InvalidOperationException(
-                $"Could not find the repository root above {AppContext.BaseDirectory}.");
-        }
-
         var path = Path.Combine(
-            root.FullName, "src", "Photobooth.Server", "bin", configuration, tfm,
+            RepositoryRoot(), "src", "Photobooth.Server", "bin", configuration, tfm,
             "Photobooth.Server.dll");
 
         if (!File.Exists(path))

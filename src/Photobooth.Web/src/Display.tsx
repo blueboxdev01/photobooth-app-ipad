@@ -1,6 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import { photoUrl } from './types'
 import { previewKey } from './types'
-import type { DeliveryUpdate, SessionSnapshot, SessionState } from './types'
+import type { CapturedPhoto, DeliveryUpdate, SessionSnapshot, SessionState } from './types'
 import { useCountdown, useSession } from './useSession'
 import { backdropStyle, useDisplayTheme } from './useDisplayTheme'
 import { useWakeLock } from './useWakeLock'
@@ -18,6 +19,9 @@ import { useWakeLock } from './useWakeLock'
  */
 const POSING_STATES: SessionState[] = ['Idle', 'Countdown', 'Collecting', 'TimedOut']
 
+/** How long a shot that has just landed fills the screen before it joins the row. */
+const SPOTLIGHT_MS = 2000
+
 /** The guest-facing screen. Fullscreen on the external monitor. */
 export function Display() {
   const { snapshot, delivery, gallery, preview } = useSession()
@@ -27,6 +31,7 @@ export function Display() {
   // on without it.
   useWakeLock()
   const backdrop = backdropStyle(useDisplayTheme())
+  const spotlight = useSpotlight(snapshot?.photos)
 
   if (!snapshot) {
     return (
@@ -38,8 +43,23 @@ export function Display() {
 
   const { state } = snapshot
 
-  // Reviewing photos is the one time the mirror is not wanted -- guests are
-  // looking at what they took, not at themselves.
+  // The shot that has just landed, large, so the guest sees what was taken
+  // before the next countdown or the strip takes over. The count carries on in
+  // the corner: the next photo does not wait for this one to be admired.
+  if (spotlight && (POSING_STATES.includes(state) || state === 'ReviewShots')) {
+    return (
+      <div className="stage stage--spotlight" style={backdrop}>
+        <img className="spotlight" src={photoUrl(spotlight, 1600)} alt="The photo just taken" />
+        {state !== 'ReviewShots' && (
+          <div className="spotlight__badge">
+            <Overlay snapshot={snapshot} />
+          </div>
+        )}
+        <Filmstrip snapshot={snapshot} />
+      </div>
+    )
+  }
+
   if (state === 'ReviewShots') {
     // The strip as it will print, when the booth has drawn it for exactly these
     // shots. A reorder or a retake changes the shots and leaves an older preview
@@ -101,6 +121,45 @@ export function Display() {
       <Filmstrip snapshot={snapshot} />
     </div>
   )
+}
+
+/**
+ * The photo that has just arrived, for {@link SPOTLIGHT_MS}, or null.
+ *
+ * "Arrived" means a file name this screen has not seen before, so a retake
+ * counts and a reorder does not. Whatever is already there when the screen
+ * first connects is not news, and is not shown.
+ */
+function useSpotlight(photos: CapturedPhoto[] | undefined): CapturedPhoto | null {
+  const seen = useRef<Set<string> | null>(null)
+  const [spot, setSpot] = useState<CapturedPhoto | null>(null)
+
+  useEffect(() => {
+    if (!photos) return
+    const before = seen.current
+    seen.current = new Set(photos.map((p) => p.fileName))
+
+    if (photos.length === 0) {
+      setSpot(null)
+      return
+    }
+
+    if (before === null) return
+    const fresh = photos.filter((p) => !before.has(p.fileName))
+    if (fresh.length === 0) return
+
+    setSpot(fresh.reduce((a, b) => (a.detectedAtUtc >= b.detectedAtUtc ? a : b)))
+  }, [photos])
+
+  // Its own effect, so a snapshot that changes nothing new cannot cancel the timer
+  // and leave a photo stuck on screen.
+  useEffect(() => {
+    if (!spot) return
+    const id = setTimeout(() => setSpot(null), SPOTLIGHT_MS)
+    return () => clearTimeout(id)
+  }, [spot])
+
+  return spot
 }
 
 /**

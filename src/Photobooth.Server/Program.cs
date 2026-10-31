@@ -70,9 +70,14 @@ static string ResolveAppPath(string path) => Path.IsPathRooted(path)
     ? path
     : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
 
+// The booth's own state: saved settings, logs and the certificate authority.
+// Beside the app unless configured, which is what lets a test booth run against
+// a folder of its own instead of whatever the last manual run saved here.
+var dataFolder = ResolveAppPath(builder.Configuration["DataFolder"] ?? "data");
+
 // A rolling log on disk is what a remote tester actually sends back; console
 // output vanishes the moment they close the window.
-var logFolder = ResolveAppPath("data/logs");
+var logFolder = Path.Combine(dataFolder, "logs");
 Directory.CreateDirectory(logFolder);
 builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
@@ -95,7 +100,7 @@ builder.Services
 // The operator's own settings, read before the options are finalised so a saved
 // watch folder is in force from the first frame rather than applied afterwards.
 var settingsStore = new SettingsStore(
-    ResolveAppPath("data/settings.json"),
+    Path.Combine(dataFolder, "settings.json"),
     LoggerFactory.Create(b => b.AddConsole()).CreateLogger<SettingsStore>());
 builder.Services.AddSingleton(settingsStore);
 
@@ -137,7 +142,7 @@ builder.Services.PostConfigure<SessionSettings>(o =>
 // The booth's own certificate authority. Created on first run; the root is what
 // an iPad installs once, and the leaf is reissued below on every start so a
 // change of venue or address needs nothing done to the iPad.
-var certificates = BoothCertificates.Load(ResolveAppPath("data"));
+var certificates = BoothCertificates.Load(dataFolder);
 builder.Services.AddSingleton(certificates);
 
 // Resolved once, and registered so that everything reading these options sees
@@ -188,6 +193,9 @@ builder.Services.AddSingleton<StripCompositor>();
 builder.Services.AddSingleton<SessionArchive>();
 builder.Services.AddSingleton<GuestNumbers>();
 builder.Services.AddSingleton<PickupBoard>();
+builder.Services.AddSingleton<PickupScreen>();
+builder.Services.AddSingleton<GuestWifi>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GuestWifi>());
 builder.Services.AddSingleton<SessionEngine>();
 builder.Services.AddSingleton<DiagnosticsService>();
 builder.Services.AddSingleton<ClaimBoard>();
@@ -212,10 +220,10 @@ if (guest.Enabled)
     app.UseGuestEndpointRules(guest, certificates);
 
     app.Logger.LogInformation(
-        "Guest display reachable at https://{Host}:{Port}/display "
-        + "(certificate from http://{Host}:{CertPort}/, root {Thumbprint}).",
-        BoothCertificates.PreferredHost(), guest.DisplayPort,
-        BoothCertificates.PreferredHost(), guest.CertPort, certificates.AuthorityThumbprint);
+        "Guest display reachable at http://{Host}:{Port}/display "
+        + "(or https on port {DisplayPort}, root {Thumbprint}).",
+        BoothCertificates.PreferredHost(), guest.CertPort,
+        guest.DisplayPort, certificates.AuthorityThumbprint);
 }
 
 app.UseDefaultFiles();
@@ -284,17 +292,23 @@ app.MapGet("/api/session/preview.jpg", (StripPreviewStore previews) =>
 
 // The guests who have finished and may still be walking to the claiming station.
 // Reachable from the guest port: the station is a screen on the guests' network.
+//
+// Empty unless this booth actually uses that station. Every entry carries a
+// guest's token, and a booth handing over by number has no screen that needs
+// one, so listing them would only serve whoever on the wifi thought to ask.
 app.MapGet("/api/claim", (
     SessionCoordinator coordinator, SettingsStore settings) => Results.Ok(new
 {
     enabled = settings.Current.GuestGalleryEnabled ?? false,
     ssid = settings.Current.GuestWifiSsid,
-    guests = coordinator.RecentFinished().Select(g => new
-    {
-        token = g.Token,
-        stripUrl = g.StripUrl,
-        finishedUtc = g.FinishedUtc,
-    }),
+    guests = settings.Current.ClaimStationEnabled == true
+        ? coordinator.RecentFinished().Select(g => new
+        {
+            token = g.Token,
+            stripUrl = g.StripUrl,
+            finishedUtc = g.FinishedUtc,
+        })
+        : [],
 }));
 
 // --- delivery ---
@@ -310,18 +324,19 @@ app.MapGet("/api/delivery", (SessionCoordinator coordinator) =>
 // code the operator prints for the queue sign. Reachable from the display port,
 // because that is where the guest screen runs.
 app.MapGet("/api/guest-gallery/qr", (
-    string target, string? token, SettingsStore store, IOptions<GuestDisplayOptions> options) =>
+    string target, string? token, SettingsStore store, GuestWifi wifi,
+    IOptions<GuestDisplayOptions> options) =>
 {
     if (target == "join")
     {
-        var ssid = store.Current.GuestWifiSsid;
+        var ssid = wifi.Ssid;
         if (string.IsNullOrWhiteSpace(ssid))
         {
             return Results.NotFound();
         }
 
         return Results.File(
-            QrRenderer.Png(GuestGalleryLinks.JoinPayload(ssid, store.Current.GuestWifiPassword)),
+            QrRenderer.Png(GuestGalleryLinks.JoinPayload(ssid, wifi.Password)),
             "image/png");
     }
 
@@ -342,8 +357,8 @@ app.MapGet("/api/guest-display/qr", (string target, IOptions<GuestDisplayOptions
 {
     var host = BoothCertificates.PreferredHost();
     var url = target == "cert"
-        ? $"http://{host}:{options.Value.CertPort}/"
-        : $"https://{host}:{options.Value.DisplayPort}/display";
+        ? $"http://{host}:{options.Value.CertPort}/setup"
+        : $"http://{host}:{options.Value.CertPort}/display";
 
     return Results.File(QrRenderer.Png(url), "image/png");
 });
@@ -402,7 +417,7 @@ app.MapPost("/api/diagnostics/mark-press", (DiagnosticsService d) =>
 app.MapGet("/api/diagnostics/bundle", (DiagnosticsService d, IConfiguration config) =>
 {
     var bytes = DiagnosticsBundle.Create(
-        d.Snapshot(), ResolveAppPath("data/logs"), config);
+        d.Snapshot(), logFolder, config);
     var name = $"photobooth-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
     return Results.File(bytes, "application/zip", name);
 });
@@ -502,16 +517,40 @@ app.MapGet("/api/sessions", (SessionArchive archive) => Results.Ok(new
 // The claiming station's grid: every guest for one event day, by number. Operator
 // port only -- it lists every guest's token, so it is deliberately not on the guest
 // allowlist.
-app.MapGet("/api/pickup", (string? day, PickupBoard board, SettingsStore settings) =>
+app.MapGet("/api/pickup", (string? day, PickupBoard board, GuestWifi wifi) =>
 {
     var result = board.For(day);
     return Results.Ok(new
     {
         result.Day,
         result.Days,
-        ssid = settings.Current.GuestWifiSsid,
+        ssid = wifi.Ssid,
         guests = result.Guests,
     });
+});
+
+// The station's guest-facing monitor: whoever the operator last picked. Operator
+// port only, like the grid; the monitor is plugged into the station itself.
+app.MapGet("/api/pickup/screen", (PickupScreen screen, GuestWifi wifi) => Results.Ok(new
+{
+    guest = screen.Current(),
+    ssid = wifi.Ssid,
+}));
+app.MapPut("/api/pickup/screen", (PickupScreenRequest body, PickupBoard board, PickupScreen screen) =>
+{
+    var guest = string.IsNullOrWhiteSpace(body.Folder) ? null : board.Find(body.Folder);
+    if (guest is null)
+    {
+        return Results.NotFound(new { error = "No guest with that session folder." });
+    }
+
+    screen.Show(guest);
+    return Results.Ok(guest);
+});
+app.MapDelete("/api/pickup/screen", (PickupScreen screen) =>
+{
+    screen.Clear();
+    return Results.NoContent();
 });
 
 // The guest's QR, rendered from the link recorded for that session. Generated
@@ -536,22 +575,62 @@ static bool IsSafeSegment(string value) =>
     && !value.Contains("..")
     && value == Path.GetFileName(value);
 
+// EOS Utility files shots under a dated subfolder, and restarts its numbering, so
+// a bare name can match more than one file. The current session's own photo wins;
+// failing that the newest match anywhere in the folder.
+static string? ResolveWatchedPhoto(string root, string name, SessionEngine engine)
+{
+    var rootPrefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar)
+                   + Path.DirectorySeparatorChar;
+
+    var live = engine.Snapshot.Photos
+        .LastOrDefault(p => string.Equals(p.FileName, name, StringComparison.OrdinalIgnoreCase))
+        ?.FilePath;
+    if (live is not null
+        && Path.GetFullPath(live).StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
+        && File.Exists(live))
+    {
+        return live;
+    }
+
+    return Directory.EnumerateFiles(root, name, new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+        })
+        .OrderByDescending(File.GetLastWriteTimeUtc)
+        .FirstOrDefault();
+}
+
 // Serves a photo out of the watch folder. File name only -- no paths -- so a
 // crafted name cannot walk out of the folder.
+//
+// From the network, only the shots of the session on screen. The watch folder
+// holds every guest's raw photos under names like IMG_0042.JPG, which anyone on
+// the guests' wifi could count through; the display never asks for anything else.
 //
 // "?w=" asks for a reduced copy no wider than that on its longest side. The guest
 // display uses it: it shows a shot a few hundred pixels across and was being sent
 // the camera's 8 MB original over the wifi it shares with the guests. The operator
 // console sends no width and still gets the original.
-app.MapGet("/api/photos/{fileName}", (string fileName, int? w, WatchFolderCamera camera) =>
+app.MapGet("/api/photos/{fileName}", (
+    string fileName, int? w, HttpContext context, WatchFolderCamera camera, SessionEngine engine) =>
 {
-    if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains(".."))
+    if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains("..")
+        || fileName.IndexOfAny(['*', '?']) >= 0)
     {
         return Results.BadRequest();
     }
 
-    var full = Path.Combine(camera.WatchFolderPath, Path.GetFileName(fileName));
-    if (!File.Exists(full))
+    if (context.Connection.LocalPort != operatorPort
+        && !engine.Snapshot.Photos.Any(
+            p => string.Equals(p.FileName, fileName, StringComparison.OrdinalIgnoreCase)))
+    {
+        return Results.NotFound();
+    }
+
+    var full = ResolveWatchedPhoto(camera.WatchFolderPath, Path.GetFileName(fileName), engine);
+    if (full is null)
     {
         return Results.NotFound();
     }
@@ -579,3 +658,6 @@ app.Run();
 /// [3, 0, 1, 2, 4, 5].
 /// </param>
 internal sealed record ReorderRequest(int[]? Order);
+
+/// <param name="Folder">The session folder of the guest to put on the monitor.</param>
+internal sealed record PickupScreenRequest(string? Folder);

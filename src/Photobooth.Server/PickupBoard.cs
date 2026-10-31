@@ -62,6 +62,14 @@ public sealed class PickupBoard(SessionArchive archive, TimeProvider time)
         return Build(records, days, Choose(day, days, SessionArchive.DayOf(time.GetUtcNow())));
     }
 
+    /// <summary>One guest by their session folder, whatever day they came.</summary>
+    public PickupGuest? Find(string folder)
+    {
+        var record = Records().FirstOrDefault(
+            r => string.Equals(r.FolderName, folder, StringComparison.Ordinal));
+        return record is null ? null : Build([record], [], SessionArchive.DayOf(record)).Guests[0];
+    }
+
     /// <summary>
     /// Which day to show. A requested day is honoured even when it has no
     /// sessions, so a typo shows an empty grid instead of a different day.

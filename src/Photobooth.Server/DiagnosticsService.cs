@@ -115,7 +115,11 @@ public sealed class DiagnosticsService
         var folder = _camera.WatchFolderPath;
         var exists = Directory.Exists(folder);
         var files = exists
-            ? Directory.EnumerateFiles(folder)
+            ? Directory.EnumerateFiles(folder, "*", new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = true,
+                })
                 .Select(f => new FileInfo(f))
                 .OrderByDescending(f => f.LastWriteTimeUtc)
                 .Take(25)

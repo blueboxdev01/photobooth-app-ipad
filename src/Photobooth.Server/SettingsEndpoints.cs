@@ -53,7 +53,8 @@ public static class SettingsEndpoints
             IOptions<GuestDisplayOptions> guestDisplay,
             BoothCertificates certificates,
             DriveAuth driveAuth,
-            UploadQueue uploads) =>
+            UploadQueue uploads,
+            GuestWifi wifi) =>
         {
             var current = templates.Current;
             var usableAddresses = BoothAddresses.UsableOnThisMachine();
@@ -115,6 +116,12 @@ public static class SettingsEndpoints
                     pickupByNumber = store.Current.PickupByNumber ?? false,
                     claimingStationOnly = store.Current.ClaimingStationOnly ?? false,
                     hasPassword = !string.IsNullOrEmpty(store.Current.GuestWifiPassword),
+
+                    // On a claiming station: the wifi the booth published into the
+                    // shared folder, which is what the station actually uses.
+                    fromBooth = wifi.FromBooth() is { } shared
+                        ? new { ssid = shared.GuestWifiSsid, writtenUtc = shared.WrittenUtc }
+                        : null,
                     photosHost = GuestGalleryLinks.GuestHost(store.Current.GuestPhotosAddress),
                     photosPort = guestDisplay.Value.CertPort,
 
@@ -144,9 +151,9 @@ public static class SettingsEndpoints
                     running = guestDisplay.Value.Enabled,
                     wanted = store.Current.GuestDisplayOnNetwork ?? guestDisplay.Value.Enabled,
                     host = BoothCertificates.PreferredHost(),
-                    certUrl = $"http://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.CertPort}/",
+                    certUrl = $"http://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.CertPort}/setup",
                     displayUrl =
-                        $"https://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.DisplayPort}/display",
+                        $"http://{BoothCertificates.PreferredHost()}:{guestDisplay.Value.CertPort}/display",
                     authorityThumbprint = certificates.AuthorityThumbprint,
                     authorityExpires = certificates.AuthorityExpires,
                     addresses = BoothCertificates.Addresses().Select(a => a.ToString()),

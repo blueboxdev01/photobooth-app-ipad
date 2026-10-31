@@ -631,6 +631,16 @@ a.button, .btn.button {
 
 .shotcount { font-size: 19px; color: #9aa3ad; margin: 0; }
 
+/* The shot just taken, as large as the screen allows, with the next count in a
+   corner rather than over the guest's face. */
+.stage--spotlight { position: relative; }
+.spotlight {
+  max-height: 74vh; max-width: 94vw; width: auto; border-radius: 10px;
+  box-shadow: 0 10px 48px rgba(0, 0, 0, .55); animation: pop .35s ease-out;
+}
+.spotlight__badge { position: absolute; top: 20px; right: 24px; }
+.spotlight__badge .countdown { font-size: min(14vh, 18vw); }
+
 .filmstrip { display: flex; gap: 12px; }
 .filmstrip .shot {
   margin: 0; width: 150px; aspect-ratio: 3 / 2; border-radius: 8px; overflow: hidden;
@@ -1168,20 +1178,6 @@ a.button, .btn.button {
 }
 .pickuptile:hover .pickuptile__show, .pickuptile:focus-visible .pickuptile__show { opacity: 1; transform: none; }
 
-.pickupdialog {
-  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-  background: rgba(0, 0, 0, .66); padding: 16px;
-}
-.pickupdialog__card {
-  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
-  background: var(--panel, #1b1e24); color: inherit; padding: 24px 28px; border-radius: 16px;
-  max-height: 100%; overflow: auto;
-}
-.pickupdialog__number { margin: 0; font-size: clamp(32px, 6vh, 56px); font-weight: 800; }
-/* White plate and hard pixels: the code is read by a phone held up to a laptop. */
-.pickupdialog__qr {
-  width: min(52vh, 420px); height: auto; background: #fff; padding: 14px; border-radius: 12px;
-  image-rendering: pixelated;
-}
-.pickupdialog__what { margin: 0; font-size: 18px; font-weight: 600; }
-.pickupdialog__wifi { margin: 0; font-size: 15px; opacity: .8; }
+.pickuptile--onscreen { border-color: var(--accent, #2563eb); box-shadow: 0 0 0 2px var(--accent, #2563eb); }
+.pickuptile--onscreen .pickuptile__show { opacity: 1; transform: none; }
+.pickupnow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }

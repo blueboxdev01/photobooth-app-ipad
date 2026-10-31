@@ -45,6 +45,8 @@ interface SettingsResponse {
     pickupByNumber: boolean
     /** This computer only claims photos: no camera, no sessions. */
     claimingStationOnly: boolean
+    /** On a claiming station, the wifi the booth published into the shared folder. */
+    fromBooth: { ssid: string | null; writtenUtc: string } | null
     hasPassword: boolean
     /** The address guests are actually being sent to right now. */
     photosHost: string
@@ -659,43 +661,34 @@ function GuestDisplay({
       {g.running ? (
         <>
           <p className="muted small">
-            Do these <strong>in order</strong>, on the iPad. The second step is the
-            one people miss, and without it the display simply will not load.
+            On the iPad, join the booth wifi and scan this. Then <b>Share &rsaquo; Add to
+            Home Screen</b>, and open it from that icon. Nothing to install.
           </p>
 
           <div className="ipad">
             <figure className="ipad__step">
-              <img src="/api/guest-display/qr?target=cert" alt="" />
-              <figcaption>
-                <b>1.</b> Scan, install the profile, then turn this booth on under
-                <b> Settings &rsaquo; General &rsaquo; About &rsaquo; Certificate Trust
-                Settings</b>.
-              </figcaption>
-            </figure>
-
-            <figure className="ipad__step">
               <img src="/api/guest-display/qr?target=display" alt="" />
               <figcaption>
-                <b>2.</b> Scan to open the display.
+                Scan to open the display.
                 <br /><code>{g.displayUrl}</code>
               </figcaption>
             </figure>
           </div>
 
           <dl className="facts">
-            <dt>Certificate page</dt>
-            <dd><code>{g.certUrl}</code></dd>
-            <dt>Booth authority</dt>
-            <dd>
-              <code>{g.authorityThumbprint}</code>
-              <br />
-              <span className="muted small">
-                Install once per iPad. If this fingerprint ever changes, every iPad
-                has to trust the booth again.
-              </span>
+            <dt>Keep it awake</dt>
+            <dd className="muted small">
+              Over plain http Safari will not hold the screen on, so set the iPad&rsquo;s
+              <b> Settings &rsaquo; Display &amp; Brightness &rsaquo; Auto-Lock</b> to
+              <b> Never</b>.
             </dd>
             <dt>This machine</dt>
             <dd>{g.addresses.join(', ')}</dd>
+            <dt>Older iPads</dt>
+            <dd className="muted small">
+              One set up with the booth certificate can keep its https address. Its
+              setup page is <code>{g.certUrl}</code>.
+            </dd>
           </dl>
 
           <p className="muted small">
@@ -709,8 +702,7 @@ function GuestDisplay({
       ) : (
         <p className="muted small">
           Off. The guest display is served only to this machine, for a monitor
-          plugged into it. Switch it on to use an iPad instead — the booth will
-          issue its own certificate so Safari will give the page its camera.
+          plugged into it. Switch it on to use an iPad on the booth wifi instead.
         </p>
       )}
     </div>
@@ -897,11 +889,26 @@ function GuestGallery({
               ? <>On: this computer reads the sessions folder the booth computer fills
                   (set <strong>Output folder</strong> to that shared folder). It does not
                   start the camera, and Start Session is hidden. Restart the booth after
-                  changing this.</>
+                  changing this. Show the guests&rsquo; screen by opening
+                  {' '}<code>http://localhost:5000/pickup/screen</code> fullscreen on the
+                  monitor facing them.</>
               : <>Off: this is the booth computer. Turn this on, with the Output folder
                   pointing at the booth&rsquo;s shared sessions folder, on the computer at the
                   claiming station.</>}
           </p>
+
+          {g.claimingStationOnly && (
+            <p className={g.fromBooth?.ssid ? 'muted small' : 'banner'}>
+              {g.fromBooth?.ssid
+                ? <>Wifi details come from the booth computer: <b>{g.fromBooth.ssid}</b>,
+                    published {new Date(g.fromBooth.writtenUtc).toLocaleString()}. Change
+                    them on the booth computer, not here.</>
+                : <>The booth computer has not published its wifi details into this output
+                    folder yet, so this computer&rsquo;s own are used. Check the Output folder
+                    is the booth&rsquo;s shared sessions folder, and that the booth computer
+                    has run v0.20.0 or newer.</>}
+            </p>
+          )}
 
           <dl className="facts">
             <dt>Guests reach</dt>

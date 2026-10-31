@@ -22,9 +22,11 @@ interface PickupResponse {
  * The claiming station: every guest for the day, by the number they were given.
  *
  * A guest comes over and says their number. The operator types it, finds the
- * strip, and clicks it to show the QR, which opens that guest's page of
- * photos, strip and video on their phone. Nothing here changes anything: it only
- * reads the sessions folder the booth computer fills.
+ * strip, and clicks it: the strip and its QR go up on the guest-facing monitor
+ * (`/pickup/screen`), and the guest scans it to open their page of photos, strip
+ * and video. This screen stays the operator's, so the rest of the day's guests
+ * are never in front of the one collecting. It only reads the sessions folder
+ * the booth computer fills.
  *
  * Numbers restart each event day, so the day is part of the question. It
  * defaults to today, or the latest day there is.
@@ -35,6 +37,32 @@ export function Pickup() {
   const [day, setDay] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [shown, setShown] = useState<PickupGuest | null>(null)
+
+  // What the monitor is showing, set from here and read back so a reload of
+  // this page still knows.
+  const show = async (guest: PickupGuest | null) => {
+    try {
+      const r = guest
+        ? await fetch('/api/pickup/screen', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: guest.folder }),
+          })
+        : await fetch('/api/pickup/screen', { method: 'DELETE' })
+      if (!r.ok) throw new Error(`The station answered ${r.status}.`)
+      setShown(guest)
+      setError(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not reach the guest screen.')
+    }
+  }
+
+  useEffect(() => {
+    void fetch('/api/pickup/screen')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body: { guest: PickupGuest | null } | null) => setShown(body?.guest ?? null))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -70,11 +98,12 @@ export function Pickup() {
     return typed === '' ? all : all.filter((g) => g.number !== null && String(g.number).includes(typed))
   }, [data, typed])
 
-  // Escape closes the QR, so the operator can go straight back to the number box.
+  // Escape takes the QR off the monitor, so the operator can go straight back to
+  // the number box.
   useEffect(() => {
     if (!shown) return
     const close = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShown(null)
+      if (e.key === 'Escape') void show(null)
     }
     window.addEventListener('keydown', close)
     return () => window.removeEventListener('keydown', close)
@@ -95,7 +124,7 @@ export function Pickup() {
               onChange={(e) => setQuery(e.target.value.replace(/\D/g, ''))}
               onKeyDown={(e) => {
                 // Enter opens the code straight away when only one guest matches.
-                if (e.key === 'Enter' && guests.length === 1) setShown(guests[0])
+                if (e.key === 'Enter' && guests.length === 1) void show(guests[0])
               }}
             />
           </label>
@@ -131,12 +160,33 @@ export function Pickup() {
         </p>
 
         {error && <p className="banner">{error}</p>}
+
+        <div className="pickupnow">
+          {shown ? (
+            <>
+              <span>
+                On the guest screen: <b>{shown.number !== null ? `No. ${shown.number}` : 'a guest'}</b>
+              </span>
+              <button className="btn" onClick={() => void show(null)}>Clear the screen (Esc)</button>
+            </>
+          ) : (
+            <span className="muted small">
+              The guest screen is waiting. Open <code>/pickup/screen</code> fullscreen on the
+              monitor facing the guests.
+            </span>
+          )}
+        </div>
       </Panel>
 
       {guests.length > 0 && (
         <div className="pickupgrid">
           {guests.map((g) => (
-            <GuestTile key={g.folder} guest={g} onShow={() => setShown(g)} />
+            <GuestTile
+              key={g.folder}
+              guest={g}
+              onScreen={shown?.folder === g.folder}
+              onShow={() => void show(g)}
+            />
           ))}
         </div>
       )}
@@ -149,54 +199,26 @@ export function Pickup() {
         </Panel>
       )}
 
-      {shown && <QrDialog guest={shown} ssid={data?.ssid ?? null} onClose={() => setShown(null)} />}
     </AppShell>
   )
 }
 
-function GuestTile({ guest, onShow }: { guest: PickupGuest; onShow: () => void }) {
+function GuestTile({
+  guest, onScreen, onShow,
+}: { guest: PickupGuest; onScreen: boolean; onShow: () => void }) {
   const at = new Date(guest.createdUtc)
   const time = at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <button className="pickuptile" onClick={onShow} aria-label={`Show the QR for number ${guest.number ?? 'unnumbered'}`}>
+    <button
+      className={onScreen ? 'pickuptile pickuptile--onscreen' : 'pickuptile'}
+      onClick={onShow}
+      aria-label={`Show the QR for number ${guest.number ?? 'unnumbered'} on the guest screen`}
+    >
       <span className="pickuptile__number">{guest.number ?? '–'}</span>
       <img className="pickuptile__strip" src={guest.stripUrl} alt="" loading="lazy" />
       <span className="pickuptile__when">{time}</span>
-      <span className="pickuptile__show">Show QR</span>
+      <span className="pickuptile__show">{onScreen ? 'On the guest screen' : 'Show QR'}</span>
     </button>
-  )
-}
-
-function QrDialog({
-  guest, ssid, onClose,
-}: { guest: PickupGuest; ssid: string | null; onClose: () => void }) {
-  return (
-    <div className="pickupdialog" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="pickupdialog__card" onClick={(e) => e.stopPropagation()}>
-        <p className="pickupdialog__number">
-          {guest.number !== null ? `Number ${guest.number}` : 'Guest'}
-        </p>
-
-        <img
-          className="pickupdialog__qr"
-          src={`/api/guest-gallery/qr?target=photos&token=${encodeURIComponent(guest.token)}`}
-          alt="QR code for this guest's photos"
-        />
-
-        <p className="pickupdialog__what">
-          Scan to download {guest.photoCount} photo{guest.photoCount === 1 ? '' : 's'}, the strip
-          {guest.hasVideo ? ' and the video' : ''}
-        </p>
-
-        {ssid && (
-          <p className="pickupdialog__wifi">
-            Your phone must be on the wifi <span className="handout__ssid">{ssid}</span>
-          </p>
-        )}
-
-        <button className="btn btn--primary" onClick={onClose} autoFocus>Close</button>
-      </div>
-    </div>
   )
 }

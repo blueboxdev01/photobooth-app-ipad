@@ -194,6 +194,9 @@ public sealed class SettingsStore
 
     public BoothSettings Current { get; private set; }
 
+    /// <summary>After every save, with what was saved.</summary>
+    public event Action<BoothSettings>? Saved;
+
     public BoothSettings Save(BoothSettings settings)
     {
         lock (_sync)
@@ -204,6 +207,7 @@ public sealed class SettingsStore
         }
 
         _logger.LogInformation("Booth settings saved to {Path}.", _path);
+        Saved?.Invoke(settings);
         return settings;
     }
 
