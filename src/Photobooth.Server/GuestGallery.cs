@@ -381,10 +381,30 @@ public static class GuestGallery
                 ? $"""<video src="{href}" poster="{stripHref}" autoplay loop muted playsinline preload="metadata"></video>"""
                 : $"""<img src="{thumbHref}" alt="" loading="lazy" decoding="async">""";
 
+            // The steps sit under the button rather than at the top of the page:
+            // the guest reads them while doing them. An iPhone cannot take a
+            // video straight into Photos from a plain-HTTP page, so it goes via
+            // the download and that file's own Share > Save Video.
             var save = isAnimation
                 ? $"""
 
-                      <a class="save" href="{href}?download=1" download="{WebUtility.HtmlEncode(Download(record, name))}">Save the video</a>
+                      <div class="save-group">
+                        <a class="save" href="{href}?download=1" download="{WebUtility.HtmlEncode(Download(record, name))}">Save the video</a>
+                        <div class="save-steps">
+                          <p><b>iPhone</b> &mdash; to put it in Photos:</p>
+                          <ol>
+                            <li>Tap <b>Save the video</b>, then <b>Download</b>. If a sheet
+                                with <b>Save to Files</b> opens instead, choose that.</li>
+                            <li>Open your downloads: the <b>download arrow</b> in Safari&rsquo;s
+                                address bar, or the <b>Files</b> app &rsaquo; <b>Downloads</b>.</li>
+                            <li>Tap the video to open it.</li>
+                            <li>Tap <b>Share</b> (the square with an arrow), scroll down and tap
+                                <b>Save Video</b>. It is now in Photos.</li>
+                          </ol>
+                          <p><b>Android</b> &mdash; tap <b>Save the video</b>. It goes to
+                             Downloads and shows in your Gallery.</p>
+                        </div>
+                      </div>
                 """
                 : string.Empty;
 
@@ -421,9 +441,15 @@ public static class GuestGallery
                            font-weight: 600; }
               .how { margin: 0 0 18px; padding: 12px 14px; font-size: 14.5px;
                      line-height: 1.5; background: #eef4ff; border-radius: 10px; }
-              .save { grid-column: 1 / -1; display: block; padding: 13px;
+              .save-group { grid-column: 1 / -1; }
+              .save { display: block; padding: 13px;
                       background: #2563eb; color: #fff; text-align: center;
-                      border-radius: 12px; text-decoration: none; font-weight: 700; }
+                      border-radius: 12px 12px 0 0; text-decoration: none; font-weight: 700; }
+              .save-steps { padding: 10px 14px 12px; font-size: 14.5px; line-height: 1.5;
+                            background: #eef4ff; border-radius: 0 0 12px 12px; }
+              .save-steps p { margin: 4px 0; }
+              .save-steps ol { margin: 4px 0 10px; padding-left: 1.3em; }
+              .save-steps li { margin-bottom: 4px; }
               .all { display: block; margin: 22px 0 0; padding: 13px;
                      background: #eef0f3; color: #3c4450; text-align: center;
                      border-radius: 12px; text-decoration: none; font-weight: 600;
@@ -433,7 +459,7 @@ public static class GuestGallery
                 body { background: #14161a; color: #e8eaed; }
                 .tile { background: #1c1f24; border-color: #2b2f36; }
                 .when, .hint { color: #9aa1ab; }
-                .how { background: #18202c; }
+                .how, .save-steps { background: #18202c; }
                 .all { background: #1c1f24; color: #c7cdd6; }
               }
             </style>
@@ -443,12 +469,8 @@ public static class GuestGallery
 
             <p class="how"><b>Tap a photo</b>, then <b>touch and hold it</b> and choose
                <b>Add to Photos</b> &mdash; or <b>Download image</b> on Android. That
-               puts it straight in your camera roll.</p>
-            <p class="how"><b>To keep the video</b>, tap <b>Save the video</b>.
-               On iPhone, tap <b>Download</b>, then the <b>download arrow</b> in
-               Safari&rsquo;s address bar, tap the video, then <b>Share</b> &rsaquo;
-               <b>Save Video</b>. On Android it goes to your Downloads and shows in
-               your gallery.</p>
+               puts it straight in your camera roll. For the video, follow the steps
+               under it.</p>
 
             <div class="grid">
             {{tiles}}

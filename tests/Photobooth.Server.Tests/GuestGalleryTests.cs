@@ -156,8 +156,16 @@ public sealed class GuestGalleryTests : IDisposable
 
         var (_, body) = await GetAsync($"/g/{record.Token}");
 
-        Assert.Contains($"{record.Animation}?download=1", Text(body));
-        Assert.Contains("Save the video", Text(body));
+        var html = Text(body);
+        var button = html.IndexOf($"{record.Animation}?download=1", StringComparison.Ordinal);
+        Assert.True(button >= 0, "the page has no button to save the video");
+
+        // The iPhone's way into Photos, written where the guest is looking: under
+        // the button, not at the top of the page.
+        var steps = html[button..];
+        Assert.Contains("Save to Files", steps);
+        Assert.Contains("Downloads", steps);
+        Assert.Contains("Save Video", steps);
     }
 
     [Fact]

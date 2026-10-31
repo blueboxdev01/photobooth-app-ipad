@@ -342,7 +342,7 @@ On the day, once everything is plugged in:
 - [ ] MacBook shows *Your photos will appear here*
 - [ ] One full test session: remote press → strip preview on the iPad → **Accept** → QR on the MacBook
 - [ ] A phone that has just joined the wifi: scan the MacBook QR → strip, video and photos open
-- [ ] Tap a photo, long-press, **Add to Photos** (iPhone) or **Download image** (Android). Tap **Save the video**, then on iPhone: **Download**, the download arrow, the video, **Share > Save Video**
+- [ ] Tap a photo, long-press, **Add to Photos** (iPhone) or **Download image** (Android). For the video, follow the steps under **Save the video** on the page; on iPhone it ends with **Share > Save Video**
 - [ ] The queue sign is up
 - [ ] Free disk space is comfortably above what the event needs (about 30 MB per guest)
 

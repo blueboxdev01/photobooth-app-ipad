@@ -330,7 +330,7 @@ Do a complete guest, start to finish, with a real phone that is **not** on any o
 - [ ] **Windows:** within about 3 seconds that number appears on `/pickup`.
 - [ ] Type the number. Only that guest remains. Click their strip: the **external monitor** shows the strip and a large QR, and the tile says *On the guest screen*.
 - [ ] **Phone:** join the booth wifi with the queue-sign QR, then scan the monitor's QR. The page shows the photos, the strip and the video.
-- [ ] On the phone, save a photo (iPhone: tap, long-press, **Add to Photos**; Android: **Download image**) and the video: tap **Save the video** (iPhone: **Download**, then the download arrow in the address bar, tap the video, **Share > Save Video**). Check both land in the phone's photo gallery. Try **Download all**.
+- [ ] On the phone, save a photo (iPhone: tap, long-press, **Add to Photos**; Android: **Download image**) and the video: follow the steps printed under **Save the video** (iPhone: **Download** or **Save to Files**, open Downloads, tap the video, **Share > Save Video**). Check both land in the phone's photo gallery.
 - [ ] **Windows:** press **Esc**. The monitor goes back to *Collect your photos here*.
 - [ ] **Mac:** press **Start Session** for a second guest. They get the next number.
 - [ ] Restart the Mac's booth app and do a third guest: the number carries on rather than starting again.

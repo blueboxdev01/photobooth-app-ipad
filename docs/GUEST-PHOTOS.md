@@ -30,12 +30,24 @@ people give up on halfway.
 The video is the same strip with the photos rotating through its slots, repeated
 to about six seconds. It is an H.264 MP4, because that is what Facebook and
 Instagram accept -- they refuse a GIF. To keep it, a guest taps **Save the
-video**. On iPhone that downloads it: they tap **Download**, then the download
-arrow in Safari's address bar, the video, and **Share > Save Video**, which puts
-it in their camera roll. (Safari's player only shares the link, which offers no
-Save Video, and the one-tap share sheet needs https.) On Android it goes to
-Downloads and shows in the gallery. It can be turned off in **Settings > Looping video** if a queue is
-building.
+video**; the steps are printed under the button on their page.
+
+- **iPhone.** A plain-http page cannot put a video straight into Photos, so it
+  goes via the download:
+  1. Tap **Save the video**, then **Download**. If a sheet with **Save to Files**
+     (and Google Drive) opens instead, choose **Save to Files**.
+  2. Open the downloads: the download arrow in Safari's address bar, or the
+     **Files** app > **Downloads**.
+  3. Tap the video to open it.
+  4. **Share** (the square with an arrow), scroll down, **Save Video**. It is now
+     in Photos.
+
+  Safari's own player only shares the link, which offers no Save Video; a
+  one-tap save would need the page on https.
+- **Android.** Tap **Save the video**. It goes to Downloads and shows in the
+  gallery.
+
+It can be turned off in **Settings > Looping video** if a queue is building.
 
 It is made by `ffmpeg\ffmpeg.exe`, which ships beside the booth. If that file is
 missing, sessions still work and simply have no video.
