@@ -863,7 +863,7 @@ function GuestGallery({
           <p className="muted small">
             {g.pickupByNumber
               ? <>On: each guest is given a number (1, 2, 3&hellip;, starting again each
-                  day) when you press Accept. It is stamped on their strip and shown
+                  day) when you press Accept. It is not printed on their photos; it is shown
                   large on the booth screen, with no code. They say it at the claiming
                   station, where the operator finds them on <code>/pickup</code> and
                   shows the code. To start again from 1 mid-day, delete the test

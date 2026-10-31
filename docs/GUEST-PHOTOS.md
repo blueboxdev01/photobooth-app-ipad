@@ -29,9 +29,12 @@ people give up on halfway.
 
 The video is the same strip with the photos rotating through its slots, repeated
 to about six seconds. It is an H.264 MP4, because that is what Facebook and
-Instagram accept -- they refuse a GIF. To post it, a guest taps the video, uses
-the share button and chooses **Save Video**, then picks it from their camera
-roll. It can be turned off in **Settings > Looping video** if a queue is
+Instagram accept -- they refuse a GIF. To keep it, a guest taps **Save the
+video**. On iPhone that downloads it: they tap **Download**, then the download
+arrow in Safari's address bar, the video, and **Share > Save Video**, which puts
+it in their camera roll. (Safari's player only shares the link, which offers no
+Save Video, and the one-tap share sheet needs https.) On Android it goes to
+Downloads and shows in the gallery. It can be turned off in **Settings > Looping video** if a queue is
 building.
 
 It is made by `ffmpeg\ffmpeg.exe`, which ships beside the booth. If that file is

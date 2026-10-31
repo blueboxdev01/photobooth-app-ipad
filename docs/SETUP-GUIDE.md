@@ -60,7 +60,7 @@ the Mac.
 1. **Queue.** A printed sign shows the join-wifi QR. Guests join the booth wifi while they wait.
 2. **Centre stage.** They frame using the camera's viewfinder. The iPad counts down 3-2-1, and staff press the **BR-E1** for each shot. Each photo fills the iPad for 2 seconds, with the next count in the corner.
 3. **Preview.** After the last shot the iPad shows their **strip**. Staff at the Mac press **Accept**, or **Retake this one** on a shot they want redone.
-4. **Number.** The iPad shows a large **number** (1, 2, 3, restarting each day). It is printed on the strip too.
+4. **Number.** The iPad shows a large **number** (1, 2, 3, restarting each day). It is only on the screen, never on their photos.
 5. **Claim.** At the Windows laptop the guest says their number. The operator types it and clicks their strip. The **external monitor** shows that strip and a QR. The guest scans it and downloads their photos, the strip and a video.
 
 ---
@@ -330,7 +330,7 @@ Do a complete guest, start to finish, with a real phone that is **not** on any o
 - [ ] **Windows:** within about 3 seconds that number appears on `/pickup`.
 - [ ] Type the number. Only that guest remains. Click their strip: the **external monitor** shows the strip and a large QR, and the tile says *On the guest screen*.
 - [ ] **Phone:** join the booth wifi with the queue-sign QR, then scan the monitor's QR. The page shows the photos, the strip and the video.
-- [ ] On the phone, save a photo (iPhone: tap, long-press, **Add to Photos**; Android: **Download image**) and the video (**Save Video**). Try **Download all**.
+- [ ] On the phone, save a photo (iPhone: tap, long-press, **Add to Photos**; Android: **Download image**) and the video: tap **Save the video** (iPhone: **Download**, then the download arrow in the address bar, tap the video, **Share > Save Video**). Check both land in the phone's photo gallery. Try **Download all**.
 - [ ] **Windows:** press **Esc**. The monitor goes back to *Collect your photos here*.
 - [ ] **Mac:** press **Start Session** for a second guest. They get the next number.
 - [ ] Restart the Mac's booth app and do a third guest: the number carries on rather than starting again.

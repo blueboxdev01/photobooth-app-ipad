@@ -147,8 +147,14 @@ public static class GuestGallery
         // "Download image" on Android -- both of which land in the gallery. The
         // filename is still declared, so whichever they use keeps a name worth
         // having.
+        //
+        // Except when the page's Save button asks for the video by name. A
+        // video opened in Safari's player can only be shared as a link, so its
+        // share sheet has no Save Video. Downloaded, it is a file in Files, and
+        // a file's share sheet does -- the one way into Photos over plain HTTP.
+        var disposition = context.Request.Query.ContainsKey("download") ? "attachment" : "inline";
         context.Response.Headers.ContentDisposition =
-            $"inline; filename=\"{Download(record, allowed)}\"";
+            $"{disposition}; filename=\"{Download(record, allowed)}\"";
 
         // A session's files are written once and never change, so a phone that
         // has them can keep them. Without this, going back to the page from a
@@ -353,10 +359,10 @@ public static class GuestGallery
             // is worth watching, and neither reads at thumbnail size.
             var wide = isStrip || isAnimation ? " tile--strip" : string.Empty;
 
-            // A video is shown playing, without controls, so a tap lands on the
-            // link and opens the file itself. That is deliberate: the full-screen
-            // player is the one with iOS's share button, and Save Video there is
-            // what puts it in Photos, from where it can be posted.
+            // A video is shown playing, without controls, so a tap opens it to
+            // watch. Saving is the button under it: Safari's player shares only
+            // the link, which offers no Save Video, so the button downloads the
+            // file instead. See FileAsync.
             //
             // Nothing here pulls more than it has to. The video fetches its
             // metadata and shows the strip until it plays, rather than racing the
@@ -375,11 +381,18 @@ public static class GuestGallery
                 ? $"""<video src="{href}" poster="{stripHref}" autoplay loop muted playsinline preload="metadata"></video>"""
                 : $"""<img src="{thumbHref}" alt="" loading="lazy" decoding="async">""";
 
+            var save = isAnimation
+                ? $"""
+
+                      <a class="save" href="{href}?download=1" download="{WebUtility.HtmlEncode(Download(record, name))}">Save the video</a>
+                """
+                : string.Empty;
+
             return $"""
                       <a class="tile{wide}" href="{href}">
                         {media}
                         <span>{WebUtility.HtmlEncode(label)}</span>
-                      </a>
+                      </a>{save}
                 """;
         }));
 
@@ -408,6 +421,9 @@ public static class GuestGallery
                            font-weight: 600; }
               .how { margin: 0 0 18px; padding: 12px 14px; font-size: 14.5px;
                      line-height: 1.5; background: #eef4ff; border-radius: 10px; }
+              .save { grid-column: 1 / -1; display: block; padding: 13px;
+                      background: #2563eb; color: #fff; text-align: center;
+                      border-radius: 12px; text-decoration: none; font-weight: 700; }
               .all { display: block; margin: 22px 0 0; padding: 13px;
                      background: #eef0f3; color: #3c4450; text-align: center;
                      border-radius: 12px; text-decoration: none; font-weight: 600;
@@ -428,8 +444,11 @@ public static class GuestGallery
             <p class="how"><b>Tap a photo</b>, then <b>touch and hold it</b> and choose
                <b>Add to Photos</b> &mdash; or <b>Download image</b> on Android. That
                puts it straight in your camera roll.</p>
-            <p class="how"><b>To post the video</b> to Facebook or Instagram, tap it,
-               then use the <b>share</b> button and choose <b>Save Video</b>.</p>
+            <p class="how"><b>To keep the video</b>, tap <b>Save the video</b>.
+               On iPhone, tap <b>Download</b>, then the <b>download arrow</b> in
+               Safari&rsquo;s address bar, tap the video, then <b>Share</b> &rsaquo;
+               <b>Save Video</b>. On Android it goes to your Downloads and shows in
+               your gallery.</p>
 
             <div class="grid">
             {{tiles}}

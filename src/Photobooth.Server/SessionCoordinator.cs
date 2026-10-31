@@ -243,11 +243,13 @@ public sealed class SessionCoordinator : IHostedService
             // strip was finished -- so the guest waited for the sum of the two.
             // AnimateAsync swallows its own failures, so only the strip can fault
             // here, and WhenAll lets the video finish before that is rethrown.
-            var stamp = number is { } n ? $"No. {n}" : null;
-
+            //
+            // The guest's number is not drawn on either. It is for finding them at
+            // the claiming station, and has no business on the picture they keep
+            // and post; it is on the booth screen and in session.json instead.
             var stripTask = Task.Run(() => _compositor.Compose(
-                template, photos, _templates.Folder, temp, stamp: stamp));
-            var animationTask = AnimateAsync(template, photos, tempAnimation, stamp);
+                template, photos, _templates.Folder, temp));
+            var animationTask = AnimateAsync(template, photos, tempAnimation);
 
             await Task.WhenAll(stripTask, animationTask);
             var animation = await animationTask;
@@ -348,8 +350,7 @@ public sealed class SessionCoordinator : IHostedService
     /// </para>
     /// </summary>
     private async Task<string?> AnimateAsync(
-        StripTemplate template, IReadOnlyList<string> photos, string outputPath,
-        string? stamp = null)
+        StripTemplate template, IReadOnlyList<string> photos, string outputPath)
     {
         // Read per session rather than cached, so switching it off in Setup takes
         // effect on the very next guest.
@@ -361,7 +362,7 @@ public sealed class SessionCoordinator : IHostedService
         try
         {
             await Task.Run(() => _compositor.ComposeAnimation(
-                template, photos, _templates.Folder, outputPath, stamp: stamp));
+                template, photos, _templates.Folder, outputPath));
 
             return outputPath;
         }

@@ -67,7 +67,7 @@ router and the camera; where it says the Windows laptop is the booth, read **the
 1. **Queue.** A sign shows the join-wifi QR; they join the booth wifi while they wait.
 2. **Centre stage.** They frame on the camera's viewfinder. The iPad counts down; staff press the BR-E1 for each shot. Each photo fills the iPad for 2 seconds, with the next count in the corner.
 3. **Preview and Accept.** The iPad shows their strip. Staff press **Accept** on the Mac (or **Retake this one**).
-4. **A number.** The iPad shows a large **number** (1, 2, 3, restarting each day), also stamped on the strip.
+4. **A number.** The iPad shows a large **number** (1, 2, 3, restarting each day). It is not printed on the strip.
 5. **Claim.** At the Windows laptop the guest says their number. The operator types it on `/pickup` and clicks the guest's strip. The **external monitor** shows that guest's strip and QR; the guest scans it and downloads **their photos, the strip and the video**. Press **Esc** (or **Clear the screen**) when they are done; it also clears itself after 3 minutes.
 
 ### Set up the Mac (the main computer)
@@ -342,7 +342,7 @@ On the day, once everything is plugged in:
 - [ ] MacBook shows *Your photos will appear here*
 - [ ] One full test session: remote press → strip preview on the iPad → **Accept** → QR on the MacBook
 - [ ] A phone that has just joined the wifi: scan the MacBook QR → strip, video and photos open
-- [ ] Tap a photo, long-press, **Add to Photos** (iPhone) or **Download image** (Android). Tap the video, **Save Video**
+- [ ] Tap a photo, long-press, **Add to Photos** (iPhone) or **Download image** (Android). Tap **Save the video**, then on iPhone: **Download**, the download arrow, the video, **Share > Save Video**
 - [ ] The queue sign is up
 - [ ] Free disk space is comfortably above what the event needs (about 30 MB per guest)
 

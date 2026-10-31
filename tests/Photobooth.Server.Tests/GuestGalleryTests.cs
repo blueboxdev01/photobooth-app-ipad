@@ -128,6 +128,38 @@ public sealed class GuestGalleryTests : IDisposable
         Assert.Contains(record.FolderName, disposition);
     }
 
+    /// <summary>
+    /// The video's Save button. Safari's player shares only the link, which
+    /// offers no Save Video; a downloaded file's share sheet does.
+    /// </summary>
+    [Fact]
+    public async Task The_video_downloads_as_a_file_when_saved()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var context = Request($"/g/{record.Token}/{record.Animation}");
+        context.Request.QueryString = new QueryString("?download=1");
+        await GuestGallery.TryServeAsync(context, _archive);
+
+        Assert.Equal(200, context.Response.StatusCode);
+        Assert.Equal("video/mp4", context.Response.ContentType);
+
+        var disposition = context.Response.Headers.ContentDisposition.ToString();
+        Assert.Contains("attachment", disposition);
+        Assert.Contains(record.FolderName, disposition);
+    }
+
+    [Fact]
+    public async Task The_page_offers_a_button_to_save_the_video()
+    {
+        var record = Save("tokenAAA", DateTimeOffset.UtcNow, animated: true);
+
+        var (_, body) = await GetAsync($"/g/{record.Token}");
+
+        Assert.Contains($"{record.Animation}?download=1", Text(body));
+        Assert.Contains("Save the video", Text(body));
+    }
+
     [Fact]
     public async Task The_zip_holds_the_strip_and_every_photo()
     {

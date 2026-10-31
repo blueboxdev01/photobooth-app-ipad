@@ -120,7 +120,7 @@ public sealed class BoothSettings
     /// Whether a finished guest is given a short number to say at the claiming
     /// station, instead of being shown a photos QR on the booth screen.
     ///
-    /// When on, the number is taken at Accept, stamped on the strip, filed in
+    /// When on, the number is taken at Accept (not drawn on the strip), filed in
     /// <c>session.json</c> and shown large on the guest screen. The claiming
     /// station (another computer reading the same sessions folder) lists the
     /// guests by number. Off by default, so a booth that does not use a claiming
